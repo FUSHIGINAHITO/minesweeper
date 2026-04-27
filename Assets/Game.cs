@@ -1,10 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Game : MonoBehaviour
 {
     public GameObject cellPrefab;
+    public Color[] colors;
 
     public int width = 10;
     public int height = 10;
@@ -15,6 +17,18 @@ public class Game : MonoBehaviour
     private List<Cell> cellList = new();
 
     private bool minesPlaced = false;
+
+    // 新增：记录按下时的格子和其原始颜色，用于按下变灰、松开恢复或触发
+    private Cell pressedCell;
+    private Color pressedOriginalColor;
+
+    // 新增：左右键同时按（chord）状态（现在由左键单独触发）
+    private bool chordActive;
+    private Cell chordTarget;
+    private Dictionary<Cell, Color> chordOriginalColors = new();
+
+    // 新增：游戏结束标志
+    private bool gameOver = false;
 
     void Start()
     {
@@ -66,41 +80,265 @@ public class Game : MonoBehaviour
 
     void Update()
     {
-        // 左键点击展开格子（使用射线检测）
-        if (Input.GetMouseButtonDown(0))
+        // 始终允许按 R 重置
+        if (Input.GetKeyDown(KeyCode.R))
         {
-            var cam = Camera.main;
-            if (cam == null) return;
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            return;
+        }
 
+        // 游戏结束后不再响应其他输入
+        if (gameOver) return;
+
+        var cam = Camera.main;
+        if (cam == null) return;
+
+        // 现在：如果 chord 激活但用户松开左键 -> 结束 chord
+        if (chordActive && !Input.GetMouseButton(0))
+        {
+            // 松开时不再判断鼠标是否仍在原格，直接按需处理自动标记/扫开
+            DeactivateChord(true);
+        }
+
+        // 处理右键按下（切换旗子），只有在左键没有按住时才切换
+        if (Input.GetMouseButtonDown(1))
+        {
             Ray ray = cam.ScreenPointToRay(Input.mousePosition);
-
-            Cell clicked = null;
-
-            // 优先使用 2D 射线交点
             var hit2D = Physics2D.GetRayIntersection(ray);
             if (hit2D.collider != null)
             {
-                clicked = hit2D.collider.GetComponentInParent<Cell>();
+                var clicked = hit2D.collider.GetComponentInParent<Cell>();
+                if (clicked != null)
+                {
+                    // 仅当左键未按住时，右键用于切换标记（保留原行为）
+                    if (!Input.GetMouseButton(0))
+                    {
+                        ToggleFlag(clicked);
+                    }
+                }
+            }
+        }
+
+        // 处理左键按下：
+        // - 如果按在已展开的数字格上（value > 0），立即激活 chord（不再需要右键同时按）
+        // - 否则（未展开且未标记）记录 pressedCell（变灰）
+        if (Input.GetMouseButtonDown(0))
+        {
+            Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+
+            var hit2D = Physics2D.GetRayIntersection(ray);
+            if (hit2D.collider != null)
+            {
+                var clicked = hit2D.collider.GetComponentInParent<Cell>();
+                if (clicked != null)
+                {
+                    // 如果点击的是已展开且为数字的格子 -> 激活 chord（左键单独触发）
+                    if (clicked.isShown && clicked.value > 0)
+                    {
+                        ActivateChord(clicked);
+                    }
+                    else if (!clicked.isShown && !clicked.isFlagged)
+                    {
+                        // 如果当前 chord 未激活且右键未按，记录 pressedCell
+                        pressedCell = clicked;
+                        if (pressedCell.image != null)
+                        {
+                            pressedOriginalColor = pressedCell.image.color;
+                            pressedCell.image.color = Color.gray;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 左键松开：无论鼠标是否仍在按下时的格子上都触发（当 chord 激活时，top 的逻辑会先结束 chord）
+        if (Input.GetMouseButtonUp(0))
+        {
+            if (pressedCell != null)
+            {
+                // 始终在松开时触发（不再判断位置）
+                if (!minesPlaced)
+                {
+                    PlaceMinesAvoiding(pressedCell);
+                }
+
+                if (pressedCell.isFlagged)
+                {
+                    RestorePressedColor(pressedCell);
+                }
+                else if (pressedCell.isMine)
+                {
+                    Reveal(pressedCell);
+                    Debug.Log("Boom! 点击到地雷。");
+                    // Reveal 会设置 gameOver 并展示所有地雷
+                }
+                else
+                {
+                    RevealRecursive(pressedCell);
+                }
+
+                pressedCell = null;
+            }
+        }
+    }
+
+    private void ActivateChord(Cell numberCell)
+    {
+        if (numberCell == null) return;
+        if (chordActive) return;
+
+        chordActive = true;
+        chordTarget = numberCell;
+        chordOriginalColors.Clear();
+
+        // 收集需要变色的邻居（未展开且未标记）
+        foreach (var n in numberCell.neighbours)
+        {
+            if (n != null && !n.isShown && !n.isFlagged)
+            {
+                if (n.image != null && !chordOriginalColors.ContainsKey(n))
+                {
+                    chordOriginalColors[n] = n.image.color;
+                    n.image.color = Color.gray;
+                }
+            }
+        }
+    }
+
+    private void DeactivateChord(bool applyAutoFlag)
+    {
+        if (!chordActive) return;
+
+        // 恢复原色
+        foreach (var kv in chordOriginalColors)
+        {
+            var cell = kv.Key;
+            var col = kv.Value;
+            if (cell != null && cell.image != null && !cell.isShown && !cell.isFlagged)
+            {
+                cell.image.color = col;
+            }
+        }
+
+        // 收集目标（未展开）
+        var targets = new List<Cell>();
+        if (chordTarget != null)
+        {
+            foreach (var n in chordTarget.neighbours)
+            {
+                if (n != null && !n.isShown)
+                {
+                    targets.Add(n);
+                }
+            }
+        }
+
+        // 如果需要：检查是否全部为雷，若是则自动标上
+        if (applyAutoFlag && targets.Count > 0)
+        {
+            bool allAreMines = true;
+            foreach (var t in targets)
+            {
+                if (t.isFlagged) continue;
+                if (!t.isMine)
+                {
+                    allAreMines = false;
+                    break;
+                }
             }
 
-            if (clicked == null) return;
-
-            // 第一次点击时再随机布雷，确保点击的格子和其邻居安全
-            if (!minesPlaced)
+            if (allAreMines)
             {
-                PlaceMinesAvoiding(clicked);
+                foreach (var t in targets)
+                {
+                    if (!t.isShown && !t.isFlagged)
+                    {
+                        t.isFlagged = true;
+                        t.image.color = Color.yellow;
+                    }
+                }
+            }
+        }
+
+        // 如果目标邻居中没有任何未标记的雷，则全部展开（扫开）
+        if (targets.Count > 0)
+        {
+            bool anyMine = false;
+            foreach (var t in targets)
+            {
+                if (t.isMine && !t.isFlagged)
+                {
+                    anyMine = true;
+                    break;
+                }
             }
 
-            if (clicked.isMine)
+            if (!anyMine)
             {
-                // 点击到地雷：显示并结束（这里只做显示）
-                Reveal(clicked);
-                Debug.Log("Boom! 点击到地雷。");
+                foreach (var t in targets)
+                {
+                    if (gameOver) break;
+                    if (!t.isShown && !t.isFlagged)
+                    {
+                        // 对每个安全格子执行递归展开，保证连通的0会被扩散展开
+                        RevealRecursive(t);
+                    }
+                }
             }
-            else
+        }
+
+        chordOriginalColors.Clear();
+        chordTarget = null;
+        chordActive = false;
+    }
+
+    private void RestorePressedColor(Cell cell)
+    {
+        if (cell == null || cell.image == null) return;
+        // 标记状态优先显示标记颜色
+        if (cell.isFlagged)
+        {
+            cell.image.color = Color.yellow;
+            cell.text.gameObject.SetActive(true);
+            cell.text.text = "F";
+        }
+        else
+        {
+            cell.image.color = pressedOriginalColor;
+        }
+    }
+
+    private void ToggleFlag(Cell cell)
+    {
+        if (cell == null) return;
+        if (gameOver) return;
+        if (cell.isShown) return;
+
+        cell.isFlagged = !cell.isFlagged;
+        if (cell.isFlagged)
+        {
+            // 显示旗子
+            if (cell.text != null)
             {
-                // 非地雷：递归展开（使用栈实现）
-                RevealRecursive(clicked);
+                cell.text.gameObject.SetActive(true);
+                cell.text.text = "F";
+            }
+            if (cell.image != null)
+            {
+                cell.image.color = Color.yellow;
+            }
+        }
+        else
+        {
+            // 取消旗子
+            if (cell.text != null)
+            {
+                cell.text.gameObject.SetActive(false);
+                cell.text.text = "";
+            }
+            if (cell.image != null)
+            {
+                cell.image.color = Color.white;
             }
         }
     }
@@ -175,13 +413,25 @@ public class Game : MonoBehaviour
     private void Reveal(Cell cell)
     {
         if (cell.isShown) return;
+        if (cell.isFlagged) return; // 被标记的不能被展开
+
         cell.isShown = true;
 
         var sr = cell.image;
         sr.color = cell.isMine ? Color.red : Color.clear;
 
-        cell.text.gameObject.SetActive(true);
-        cell.text.text = cell.isMine ? "X" : (cell.value > 0 ? cell.value.ToString() : "");
+        if (cell.text != null)
+        {
+            cell.text.gameObject.SetActive(true);
+            cell.text.text = cell.isMine ? "X" : (cell.value > 0 ? cell.value.ToString() : "");
+            cell.text.color = colors[Mathf.Clamp(cell.value, 0, colors.Length - 1)];
+        }
+
+        if (cell.isMine)
+        {
+            // 触雷 -> 游戏结束
+            GameOver(cell);
+        }
     }
 
     private void RevealRecursive(Cell start)
@@ -191,22 +441,65 @@ public class Game : MonoBehaviour
 
         while (stack.Count > 0)
         {
+            if (gameOver) return;
+
             var c = stack.Pop();
             if (c.isShown) continue;
 
             Reveal(c);
+
+            if (gameOver) return;
 
             // 只有当当前格子没有相邻雷（value == 0）时，才继续展开邻居
             if (c.value == 0 && !c.isMine)
             {
                 foreach (var n in c.neighbours)
                 {
-                    if (n != null && !n.isShown && !n.isMine)
+                    if (n != null && !n.isShown && !n.isMine && !n.isFlagged)
                     {
                         stack.Push(n);
                     }
                 }
             }
         }
+    }
+
+    private void GameOver(Cell exploded)
+    {
+        if (gameOver) return;
+        gameOver = true;
+
+        // 展示所有地雷
+        foreach (var c in cellList)
+        {
+            if (c == null) continue;
+
+            if (c.isMine)
+            {
+                c.isShown = true;
+                if (c.image != null)
+                {
+                    c.image.color = Color.red;
+                }
+                if (c.text != null)
+                {
+                    c.text.gameObject.SetActive(true);
+                    c.text.text = "X";
+                }
+            }
+            else
+            {
+                // 可选：显示被错误标记的格子（例如变色）
+                if (c.isFlagged && !c.isMine)
+                {
+                    if (c.image != null)
+                    {
+                        c.image.color = new Color(0.5f, 0f, 0.5f); // 紫色表示错误标记
+                    }
+                }
+            }
+        }
+
+        Debug.Log("Game Over. 按 R 重新开始。");
     }
 }

@@ -223,6 +223,7 @@ MonoBehaviour:
   neighbours: []
   isShown: 0
   isMine: 0
+  isFlagged: 0
   text: {fileID: 2038529365659917459}
   image: {fileID: 6476652457109492984}
 --- !u!1 &8122050868552056105
@@ -298,8 +299,8 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
+  m_SortingOrder: -100
+  m_Sprite: {fileID: 7482667652216324306, guid: db750325989564987a34393247d883b4, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -353,5 +354,5 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 1.1111112, y: 1.111111}
   m_EdgeRadius: 0

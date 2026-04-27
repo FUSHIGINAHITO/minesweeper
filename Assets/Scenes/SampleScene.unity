@@ -158,7 +158,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.4528302, g: 0.4528302, b: 0.4528302, a: 0}
+  m_BackGroundColor: {r: 0.9150943, g: 0.9150943, b: 0.9150943, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -259,9 +259,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellPrefab: {fileID: 6548039086419453990, guid: fb387ced439c77c4f9dea84b6c625028, type: 3}
+  colors:
+  - {r: 0, g: 0, b: 0, a: 0}
+  - {r: 0.11534355, g: 0.11534355, b: 0.9056604, a: 1}
+  - {r: 0.09549664, g: 0.6981132, b: 0.09549664, a: 1}
+  - {r: 0.9150943, g: 0.11654504, b: 0.11654504, a: 1}
+  - {r: 0.04071733, g: 0.04071733, b: 0.5754717, a: 1}
+  - {r: 0.49056602, g: 0.2584864, b: 0.108757555, a: 1}
+  - {r: 0.13519046, g: 0.90110207, b: 0.9245283, a: 1}
+  - {r: 0.13207549, g: 0.13207549, b: 0.13207549, a: 1}
+  - {r: 0.6132076, g: 0.6132076, b: 0.6132076, a: 1}
   width: 100
   height: 50
-  mineCount: 100
+  mineCount: 700
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

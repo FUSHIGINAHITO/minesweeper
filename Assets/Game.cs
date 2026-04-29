@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class Game : MonoBehaviour
 {
@@ -12,6 +13,12 @@ public class Game : MonoBehaviour
 
     public TMP_Text restMine;
     public TMP_Text timer;
+    public Image image;
+
+    public Sprite normalSprite;
+    public Sprite holdSprite;
+    public Sprite victorySprite;
+    public Sprite defeatSprite;
 
     // 格子颜色配置
     public Color defaultColor = Color.white;
@@ -142,13 +149,15 @@ public class Game : MonoBehaviour
         // 初始化 UI
         UpdateRestMine();
         UpdateTimerText();
+
+        image.sprite = normalSprite;
     }
 
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            Restart();
             return;
         }
 
@@ -223,6 +232,8 @@ public class Game : MonoBehaviour
                 pressedCell = clicked;
                 pressedOriginalColor = pressedCell.image.color;
                 pressedCell.image.color = pressedColor;
+
+                image.sprite = holdSprite;
             }
         }
 
@@ -244,7 +255,6 @@ public class Game : MonoBehaviour
                 else if (pressedCell.isMine)
                 {
                     Reveal(pressedCell);
-                    Debug.Log("触雷。");
                 }
                 else
                 {
@@ -252,6 +262,11 @@ public class Game : MonoBehaviour
                 }
 
                 pressedCell = null;
+
+                if (!gameOver)
+                {
+                    image.sprite = normalSprite;
+                }
             }
         }
     }
@@ -280,6 +295,8 @@ public class Game : MonoBehaviour
                 n.image.color = chordColor;
             }
         }
+
+        image.sprite = holdSprite;
     }
 
     private void DeactivateChord(bool applyAutoFlag)
@@ -362,6 +379,11 @@ public class Game : MonoBehaviour
         chordOriginalColors.Clear();
         chordTarget = null;
         chordActive = false;
+
+        if (!gameOver)
+        {
+            image.sprite = normalSprite;
+        }
     }
 
     private void RestorePressedColor(Cell cell)
@@ -565,6 +587,8 @@ public class Game : MonoBehaviour
 
         exploded.image.color = bombMineColor;
         Camera.main.backgroundColor = defeatColor;
+
+        image.sprite = defeatSprite;
     }
 
     // 检查是否胜利：所有非雷格被扫开
@@ -585,6 +609,8 @@ public class Game : MonoBehaviour
         gameOver = true;
         timerRunning = false;
         Camera.main.backgroundColor = victoryColor;
+
+        image.sprite = victorySprite;
     }
 
     // 更新剩余雷数显示（总雷数 - 已标记）
@@ -597,5 +623,10 @@ public class Game : MonoBehaviour
     private void UpdateTimerText()
     {
         timer.text = Mathf.FloorToInt(elapsedTime).ToString();
+    }
+
+    public void Restart()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }

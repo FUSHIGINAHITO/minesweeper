@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class Cell : MonoBehaviour
 {
@@ -16,4 +15,9 @@ public class Cell : MonoBehaviour
 
     public TMP_Text text;
     public SpriteRenderer image;
+
+    private void Awake()
+    {
+        text.transform.rotation = Quaternion.identity;
+    }
 }

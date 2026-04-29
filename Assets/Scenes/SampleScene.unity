@@ -796,6 +796,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1622550046}
   - component: {fileID: 1622550047}
+  - component: {fileID: 1622550048}
+  - component: {fileID: 1622550049}
+  - component: {fileID: 1622550050}
   m_Layer: 0
   m_Name: Game
   m_TagString: Untagged
@@ -830,8 +833,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4478c7c87e0a9ce4d9887bd04e5dbdb9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellPrefab: {fileID: 6548039086419453990, guid: fb387ced439c77c4f9dea84b6c625028, type: 3}
-  cellSize: 0.2
+  map: {fileID: 1622550049}
   colors:
   - {r: 0, g: 0, b: 0, a: 0}
   - {r: 0, g: 0, b: 1, a: 1}
@@ -842,6 +844,10 @@ MonoBehaviour:
   - {r: 0, g: 0.70483863, b: 0.7264151, a: 1}
   - {r: 0.13207549, g: 0.13207549, b: 0.13207549, a: 1}
   - {r: 0.6132076, g: 0.6132076, b: 0.6132076, a: 1}
+  - {r: 0.7562283, g: 0.12517802, b: 0.9150943, a: 1}
+  - {r: 0.8962264, g: 0.5476848, b: 0.080322154, a: 1}
+  - {r: 0.11160557, g: 0.7169812, b: 0.28736135, a: 1}
+  - {r: 0.6792453, g: 0.62170416, b: 0.022427924, a: 1}
   restMine: {fileID: 1135703351}
   timer: {fileID: 1540734188}
   image: {fileID: 1330567993}
@@ -859,11 +865,65 @@ MonoBehaviour:
   wrongFlagColor: {r: 0.78846896, g: 0.52198297, b: 0.9622642, a: 1}
   victoryColor: {r: 0.9339623, g: 1, b: 0.9009434, a: 1}
   defeatColor: {r: 1, g: 0.9103774, b: 0.9286057, a: 1}
+--- !u!114 &1622550048
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1622550045}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc1641889bd034a4c990980bee70a4b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cellPrefab: {fileID: 6548039086419453990, guid: fb387ced439c77c4f9dea84b6c625028, type: 3}
+  cellSize: 0.2
   mineRatio: 0.2063
   marginLeftPercent: 0.01
   marginRightPercent: 0.01
   marginTopPercent: 0.05
   marginBottomPercent: 0.01
+--- !u!114 &1622550049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1622550045}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2375395aeb1b7446bbfb7f6c326af5b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cellPrefab: {fileID: 6548039086419453990, guid: 67068238504a996418b6b47a9be82684, type: 3}
+  cellSize: 0.2
+  mineRatio: 0.2063
+  marginLeftPercent: 0.01
+  marginRightPercent: 0.01
+  marginTopPercent: 0.05
+  marginBottomPercent: 0.01
+--- !u!114 &1622550050
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1622550045}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecbf26cb1737648449c470803ab15422, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cellPrefab: {fileID: 6548039086419453990, guid: d543585e33fcc2e4792c7417961a9ae0, type: 3}
+  cellSize: 0.2
+  mineRatio: 0.1
+  marginLeftPercent: 0.01
+  marginRightPercent: 0.01
+  marginTopPercent: 0.05
+  marginBottomPercent: 0.01
+  prefabPositionOffset: {x: 0, y: 0}
+  drawDebugGizmos: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

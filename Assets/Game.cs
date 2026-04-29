@@ -7,8 +7,8 @@ using UnityEngine.UI;
 
 public class Game : MonoBehaviour
 {
-    public GameObject cellPrefab;
-    public float cellSize = 0.2f;
+    public Map map;
+
     public Color[] colors;
 
     public TMP_Text restMine;
@@ -34,30 +34,9 @@ public class Game : MonoBehaviour
     public Color victoryColor = Color.green;
     public Color defeatColor = Color.red;
 
-    // 雷率（总格子数 * mineRatio -> 地雷数）
-    [Range(0f, 1f)]
-    public float mineRatio = 0.1f;
-
-    // 屏幕边缘留白（百分比）
-    [Range(0f, 0.5f)]
-    public float marginLeftPercent = 0.05f;
-
-    [Range(0f, 0.5f)]
-    public float marginRightPercent = 0.05f;
-
-    [Range(0f, 0.5f)]
-    public float marginTopPercent = 0.05f;
-
-    [Range(0f, 0.5f)]
-    public float marginBottomPercent = 0.05f;
-
     private Cell[,] cells;
-    private List<Cell> cellList = new List<Cell>();
+    private List<Cell> cellList;
     private bool minesPlaced = false;
-
-    // 运行时网格尺寸（由屏幕尺寸计算）
-    private int gridWidth;
-    private int gridHeight;
     private int totalMineCount;
 
     // 按下/松开相关
@@ -79,71 +58,24 @@ public class Game : MonoBehaviour
 
     void Start()
     {
-        // 计算可用世界区域并尽量用 1m 单元填满（保持单元边长为 1）
-        var cam = Camera.main;
-        Vector3 origin = Vector3.zero;
-
+        if (map == null)
         {
-            float camDistance = Mathf.Abs(cam.transform.position.z);
-
-            float ml = Mathf.Clamp01(marginLeftPercent);
-            float mr = Mathf.Clamp01(marginRightPercent);
-            float mt = Mathf.Clamp01(marginTopPercent);
-            float mb = Mathf.Clamp01(marginBottomPercent);
-
-            if (ml + mr >= 0.99f)
-            {
-                float excess = (ml + mr - 0.99f) * 0.5f;
-                ml = Mathf.Max(0f, ml - excess);
-                mr = Mathf.Max(0f, mr - excess);
-            }
-
-            if (mt + mb >= 0.99f)
-            {
-                float excess = (mt + mb - 0.99f) * 0.5f;
-                mt = Mathf.Max(0f, mt - excess);
-                mb = Mathf.Max(0f, mb - excess);
-            }
-
-            var bottomLeft = cam.ScreenToWorldPoint(new Vector3(Screen.width * ml, Screen.height * mb, camDistance));
-            var topRight = cam.ScreenToWorldPoint(new Vector3(Screen.width * (1f - mr), Screen.height * (1f - mt), camDistance));
-
-            float worldWidth = topRight.x - bottomLeft.x;
-            float worldHeight = topRight.y - bottomLeft.y;
-
-            // 以 1m 为单元，尽量铺满可用区域
-            gridWidth = Mathf.Max(1, Mathf.FloorToInt(worldWidth / cellSize));
-            gridHeight = Mathf.Max(1, Mathf.FloorToInt(worldHeight / cellSize));
-
-            var centerWorld = (bottomLeft + topRight) * 0.5f;
-            origin = new Vector3(
-                centerWorld.x - (gridWidth - 1) * cellSize * 0.5f,
-                centerWorld.y - (gridHeight - 1) * cellSize * 0.5f,
-                0f
-            );
+            Debug.LogError("Map is not assigned on Game.");
+            return;
         }
 
-        // 计算地雷总数
-        totalMineCount = Mathf.RoundToInt(gridWidth * gridHeight * mineRatio);
-        cells = new Cell[gridWidth, gridHeight];
+        map.Generate();
 
-        for (int x = 0; x < gridWidth; x++)
+        // 同步数据引用
+        cells = map.cells;
+        cellList = map.cellList;
+        totalMineCount = map.totalMineCount;
+        minesPlaced = map.minesPlaced;
+
+        // 初始化格子颜色（由 Game 控制视觉样式）
+        foreach (var c in cellList)
         {
-            for (int y = 0; y < gridHeight; y++)
-            {
-                var position = origin + new Vector3(x * cellSize, y * cellSize, 0f);
-                var obj = Instantiate(cellPrefab, position, Quaternion.identity);
-
-                obj.transform.localScale = cellSize * Vector3.one;
-
-                var cell = obj.GetComponent<Cell>();
-                cells[x, y] = cell;
-                cellList.Add(cell);
-                cell.i = x;
-                cell.j = y;
-
-                cell.image.color = defaultColor;
-            }
+            c.image.color = defaultColor;
         }
 
         // 初始化 UI
@@ -244,7 +176,12 @@ public class Game : MonoBehaviour
             {
                 if (!minesPlaced)
                 {
-                    PlaceMinesAvoiding(pressedCell);
+                    map.PlaceMinesAvoiding(pressedCell);
+
+                    // 同步地图变化
+                    totalMineCount = map.totalMineCount;
+                    minesPlaced = map.minesPlaced;
+
                     UpdateRestMine();
                 }
 
@@ -424,73 +361,6 @@ public class Game : MonoBehaviour
         UpdateRestMine();
     }
 
-    private void Shuffle(List<Cell> list)
-    {
-        for (int i = list.Count - 1; i > 0; i--)
-        {
-            int j = Random.Range(0, i + 1);
-            (list[j], list[i]) = (list[i], list[j]);
-        }
-    }
-
-    private void PlaceMinesAvoiding(Cell firstClicked)
-    {
-        var candidates = new List<Cell>(cellList);
-
-        candidates.Remove(firstClicked);
-        totalMineCount = Mathf.Min(totalMineCount, candidates.Count);
-
-        Shuffle(candidates);
-
-        for (int i = 0; i < totalMineCount; i++)
-        {
-            candidates[i].isMine = true;
-        }
-
-        minesPlaced = true;
-        CalculateNeighbours();
-    }
-
-    private void CalculateNeighbours()
-    {
-        for (int x = 0; x < gridWidth; x++)
-        {
-            for (int y = 0; y < gridHeight; y++)
-            {
-                var cell = cells[x, y];
-                cell.neighbours.Clear();
-                int adjacentMines = 0;
-
-                for (int dx = -1; dx <= 1; dx++)
-                {
-                    for (int dy = -1; dy <= 1; dy++)
-                    {
-                        if (dx == 0 && dy == 0)
-                        {
-                            continue;
-                        }
-
-                        int nx = x + dx;
-                        int ny = y + dy;
-
-                        if (nx >= 0 && nx < gridWidth && ny >= 0 && ny < gridHeight)
-                        {
-                            var neighbour = cells[nx, ny];
-                            cell.neighbours.Add(neighbour);
-
-                            if (neighbour.isMine)
-                            {
-                                adjacentMines++;
-                            }
-                        }
-                    }
-                }
-
-                cell.value = adjacentMines;
-            }
-        }
-    }
-
     private void Reveal(Cell cell)
     {
         if (cell.isShown)
@@ -594,15 +464,11 @@ public class Game : MonoBehaviour
     // 检查是否胜利：所有非雷格被扫开
     private void CheckWin()
     {
-        for (int x = 0; x < gridWidth; x++)
+        foreach (var c in cellList)
         {
-            for (int y = 0; y < gridHeight; y++)
+            if (!c.isMine && !c.isShown)
             {
-                var c = cells[x, y];
-                if (!c.isMine && !c.isShown)
-                {
-                    return;
-                }
+                return;
             }
         }
 

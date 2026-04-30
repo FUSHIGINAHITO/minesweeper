@@ -859,7 +859,7 @@ MonoBehaviour:
   pressedColor: {r: 0.41509432, g: 0.41509432, b: 0.41509432, a: 1}
   chordColor: {r: 0.41568628, g: 0.41568628, b: 0.41568628, a: 1}
   flagColor: {r: 1, g: 0.785967, b: 0.4292453, a: 1}
-  revealedColor: {r: 0.8584906, g: 0.8584906, b: 0.8584906, a: 0}
+  revealedColor: {r: 0.8584906, g: 0.8584906, b: 0.8584906, a: 0.7372549}
   mineColor: {r: 1, g: 0.81069183, b: 0.7971698, a: 1}
   bombMineColor: {r: 1, g: 0.4481132, b: 0.4481132, a: 1}
   wrongFlagColor: {r: 0.78846896, g: 0.52198297, b: 0.9622642, a: 1}
@@ -878,7 +878,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellPrefab: {fileID: 6548039086419453990, guid: fb387ced439c77c4f9dea84b6c625028, type: 3}
-  cellSize: 0.2
+  cellSize: 1
   mineRatio: 0.2063
   marginLeftPercent: 0.01
   marginRightPercent: 0.01
@@ -897,8 +897,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellPrefab: {fileID: 6548039086419453990, guid: 67068238504a996418b6b47a9be82684, type: 3}
-  cellSize: 0.2
-  mineRatio: 0.2063
+  cellSize: 1
+  mineRatio: 0.25
   marginLeftPercent: 0.01
   marginRightPercent: 0.01
   marginTopPercent: 0.05
@@ -916,8 +916,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellPrefab: {fileID: 6548039086419453990, guid: d543585e33fcc2e4792c7417961a9ae0, type: 3}
-  cellSize: 0.2
-  mineRatio: 0.1
+  cellSize: 1
+  mineRatio: 0.15
   marginLeftPercent: 0.01
   marginRightPercent: 0.01
   marginTopPercent: 0.05

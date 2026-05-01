@@ -10,42 +10,10 @@ public class HexMap : Map
     // 生成正六边形外轮廓网格（flat-top，轴坐标 axial -> 像素映射）
     protected override void GenerateGrid()
     {
-        var cam = Camera.main;
-        if (cam == null) return;
-
-        float camDistance = Mathf.Abs(cam.transform.position.z);
-
-        float ml = Mathf.Clamp01(marginLeftPercent);
-        float mr = Mathf.Clamp01(marginRightPercent);
-        float mt = Mathf.Clamp01(marginTopPercent);
-        float mb = Mathf.Clamp01(marginBottomPercent);
-
-        if (ml + mr >= 0.99f)
-        {
-            float excess = (ml + mr - 0.99f) * 0.5f;
-            ml = Mathf.Max(0f, ml - excess);
-            mr = Mathf.Max(0f, mr - excess);
-        }
-
-        if (mt + mb >= 0.99f)
-        {
-            float excess = (mt + mb - 0.99f) * 0.5f;
-            mt = Mathf.Max(0f, mt - excess);
-            mb = Mathf.Max(0f, mb - excess);
-        }
-
-        var bottomLeft = cam.ScreenToWorldPoint(new Vector3(Screen.width * ml, Screen.height * mb, camDistance));
-        var topRight = cam.ScreenToWorldPoint(new Vector3(Screen.width * (1f - mr), Screen.height * (1f - mt), camDistance));
-
-        float worldWidth = topRight.x - bottomLeft.x;
-        float worldHeight = topRight.y - bottomLeft.y;
-
         // 将 cellSize 视为六边形总体宽度（flat-top）：hexWidth = cellSize = 2 * size
         float hexWidth = cellSize;
         float size = hexWidth * 0.5f;                 // distance from center to flat side horizontally
         float hexHeight = Mathf.Sqrt(3f) * size;     // vertical span per row
-        float colSpacing = 1.5f * size;              // horizontal step between q columns
-        float rowSpacing = hexHeight;                // vertical step between base rows
 
         // 选择合适的 radius，使得正六边形外轮廓整体能放进 worldWidth/worldHeight
         // 对于 radius R:
@@ -117,7 +85,7 @@ public class HexMap : Map
             int r = item.r;
             Vector3 pos = item.pos + offset;
 
-            var obj = Instantiate(cellPrefab, pos, Quaternion.identity);
+            var obj = Instantiate(cellPrefab, pos, Quaternion.identity, transform);
             obj.transform.localScale = cellSize * Vector3.one;
 
             var cell = obj.GetComponent<Cell>();

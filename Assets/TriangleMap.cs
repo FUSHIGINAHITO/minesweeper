@@ -6,45 +6,12 @@ public class TriangleMap : Map
     private int gridWidth;
     private int gridHeight;
 
-    // 在 Inspector 中微调实例化位置（世界单位），用于补偿 prefab 的视觉偏差
-    public Vector2 prefabPositionOffset = Vector2.zero;
-
     // 控制邻居判定方式：false = 共享顶点为邻居（原行为），true = 共享边为邻居
     public bool useSharedEdges = false;
 
     // 每个小三角形的边长被视为 cellSize（用于网格布局计算）
     protected override void GenerateGrid()
     {
-        var cam = Camera.main;
-        if (cam == null) return;
-
-        float camDistance = Mathf.Abs(cam.transform.position.z);
-
-        float ml = Mathf.Clamp01(marginLeftPercent);
-        float mr = Mathf.Clamp01(marginRightPercent);
-        float mt = Mathf.Clamp01(marginTopPercent);
-        float mb = Mathf.Clamp01(marginBottomPercent);
-
-        if (ml + mr >= 0.99f)
-        {
-            float excess = (ml + mr - 0.99f) * 0.5f;
-            ml = Mathf.Max(0f, ml - excess);
-            mr = Mathf.Max(0f, mr - excess);
-        }
-
-        if (mt + mb >= 0.99f)
-        {
-            float excess = (mt + mb - 0.99f) * 0.5f;
-            mt = Mathf.Max(0f, mt - excess);
-            mb = Mathf.Max(0f, mb - excess);
-        }
-
-        var bottomLeft = cam.ScreenToWorldPoint(new Vector3(Screen.width * ml, Screen.height * mb, camDistance));
-        var topRight = cam.ScreenToWorldPoint(new Vector3(Screen.width * (1f - mr), Screen.height * (1f - mt), camDistance));
-
-        float worldWidth = topRight.x - bottomLeft.x;
-        float worldHeight = topRight.y - bottomLeft.y;
-
         // cellSize 视为小等边三角形的边长 s（用于布局计算）
         float s = cellSize;
         float h = Mathf.Sqrt(3f) * 0.5f * s; // 小三角形高度
@@ -163,8 +130,8 @@ public class TriangleMap : Map
 
             float rotZ = triangleUp[tIdx] ? 0f : 180f;
             // 将用户可调偏移应用到最终位置（世界单位）
-            Vector3 applyPos = worldPos + new Vector3(prefabPositionOffset.x, prefabPositionOffset.y, 0f);
-            var obj = Instantiate(cellPrefab, applyPos, Quaternion.Euler(0f, 0f, rotZ));
+            Vector3 applyPos = worldPos;
+            var obj = Instantiate(cellPrefab, applyPos, Quaternion.Euler(0f, 0f, rotZ), transform);
             obj.transform.localScale = cellSize * Vector3.one;
 
             var cell = obj.GetComponent<Cell>();

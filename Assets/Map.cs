@@ -12,19 +12,15 @@ public abstract class Map : MonoBehaviour
     public float mineRatio = 0.2063f;
 
     // 屏幕边缘留白（百分比）
-    [Range(0f, 0.5f)]
+    [HideInInspector, NonSerialized]
     public float marginLeftPercent = 0.01f;
-
-    [Range(0f, 0.5f)]
+    [HideInInspector, NonSerialized]
     public float marginRightPercent = 0.01f;
-
-    [Range(0f, 0.5f)]
+    [HideInInspector, NonSerialized]
     public float marginTopPercent = 0.05f;
-
-    [Range(0f, 0.5f)]
+    [HideInInspector, NonSerialized]
     public float marginBottomPercent = 0.01f;
 
-    // 运行时网格数据（供 Game 使用）
     [HideInInspector, NonSerialized]
     public Cell[,] cells;
     [HideInInspector, NonSerialized]
@@ -34,9 +30,46 @@ public abstract class Map : MonoBehaviour
     [HideInInspector, NonSerialized]
     public bool minesPlaced = false;
 
+    protected Vector3 bottomLeft;
+    protected Vector3 topRight;
+
+    protected float worldWidth;
+    protected float worldHeight;
+
     // 生成网格并构建邻居关系（不放置地雷）
     public void Generate()
     {
+        var cam = Camera.main;
+        if (cam == null)
+            return;
+
+        float camDistance = Mathf.Abs(cam.transform.position.z);
+
+        float ml = Mathf.Clamp01(marginLeftPercent);
+        float mr = Mathf.Clamp01(marginRightPercent);
+        float mt = Mathf.Clamp01(marginTopPercent);
+        float mb = Mathf.Clamp01(marginBottomPercent);
+
+        if (ml + mr >= 0.99f)
+        {
+            float excess = (ml + mr - 0.99f) * 0.5f;
+            ml = Mathf.Max(0f, ml - excess);
+            mr = Mathf.Max(0f, mr - excess);
+        }
+
+        if (mt + mb >= 0.99f)
+        {
+            float excess = (mt + mb - 0.99f) * 0.5f;
+            mt = Mathf.Max(0f, mt - excess);
+            mb = Mathf.Max(0f, mb - excess);
+        }
+
+        bottomLeft = cam.ScreenToWorldPoint(new Vector3(Screen.width * ml, Screen.height * mb, camDistance));
+        topRight = cam.ScreenToWorldPoint(new Vector3(Screen.width * (1f - mr), Screen.height * (1f - mt), camDistance));
+
+        worldWidth = topRight.x - bottomLeft.x;
+        worldHeight = topRight.y - bottomLeft.y;
+
         cellList.Clear();
 
         GenerateGrid();

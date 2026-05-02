@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class TriangleMap : Map
 {
@@ -131,10 +132,14 @@ public class TriangleMap : Map
             float rotZ = triangleUp[tIdx] ? 0f : 180f;
             // 将用户可调偏移应用到最终位置（世界单位）
             Vector3 applyPos = worldPos;
-            var obj = Instantiate(cellPrefab, applyPos, Quaternion.Euler(0f, 0f, rotZ), transform);
-            obj.transform.localScale = cellSize * Vector3.one;
 
+            var obj = PoolManager.instance.triangle.Require();
+            obj.transform.SetParent(transform);
+            obj.transform.SetPositionAndRotation(applyPos, Quaternion.Euler(0f, 0f, rotZ));
+            obj.transform.localScale = cellSize * Vector3.one;
             var cell = obj.GetComponent<Cell>();
+            cell.Init();
+
             triangleToCell[tIdx] = cell;
             cellList.Add(cell);
 

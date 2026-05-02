@@ -4,7 +4,6 @@ using UnityEngine;
 
 public abstract class Map : MonoBehaviour
 {
-    public GameObject cellPrefab;
     public float cellSize = 0.2f;
 
     // 雷率（总格子数 * mineRatio -> 地雷数）

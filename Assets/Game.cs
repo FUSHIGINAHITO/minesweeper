@@ -6,9 +6,10 @@ using UnityEngine.UI;
 
 public class Game : MonoBehaviour
 {
-    public Map map;
+    public static Game instance => _instance;
+    public static Game _instance;
 
-    public Color[] colors;
+    public Map map;
 
     public TMP_Text restMine;
     public TMP_Text timer;
@@ -18,6 +19,8 @@ public class Game : MonoBehaviour
     public Sprite holdSprite;
     public Sprite victorySprite;
     public Sprite defeatSprite;
+
+    public Color[] colors;
 
     // 格子颜色配置
     public Color defaultColor;
@@ -54,6 +57,11 @@ public class Game : MonoBehaviour
     private int flaggedCount = 0;
     private float elapsedTime = 0f;
     private bool timerRunning = false;
+    
+    private void Awake()
+    {
+        _instance = this;
+    }
 
     private void Start()
     {
@@ -97,11 +105,11 @@ public class Game : MonoBehaviour
         // 分别检测左右键对应的 chord 是否应该结束
         if (leftChordActive && !Input.GetMouseButton(0))
         {
-            DeactivateChord(true, false); // 左键 chord 结束：保留自动标雷行为
+            DeactivateChord(true, false); // 左键 chord 结束
         }
         if (rightChordActive && !Input.GetMouseButton(1))
         {
-            DeactivateChord(false, true); // 右键 chord 结束：不触发自动标雷
+            DeactivateChord(true, true); // 右键 chord 结束
         }
 
         // 右键：在数字格上触发右键 chord（高亮已标雷），否则切换旗子（仅在未按左键时）
@@ -538,6 +546,17 @@ public class Game : MonoBehaviour
             return;
         }
 
+        // 先取消所有未结算的 chord 操作，恢复被高亮的格子颜色，避免后续结算时颜色冲突
+        DeactivateChord(false, true);  // 取消右键 chord（不执行自动标雷）
+        DeactivateChord(false, false); // 取消左键 chord（不执行自动标雷）
+
+        // 若存在按下但未松开的格子，恢复其颜色
+        if (pressedCell != null)
+        {
+            RestorePressedColor(pressedCell);
+            pressedCell = null;
+        }
+
         gameOver = true;
         timerRunning = false;
 
@@ -572,6 +591,17 @@ public class Game : MonoBehaviour
             {
                 return;
             }
+        }
+
+        // 先取消所有未结算的 chord 操作，恢复被高亮的格子颜色，避免后续结算时颜色冲突
+        DeactivateChord(false, true);  // 取消右键 chord（不执行自动标雷）
+        DeactivateChord(false, false); // 取消左键 chord（不执行自动标雷）
+
+        // 若存在按下但未松开的格子，恢复其颜色
+        if (pressedCell != null)
+        {
+            RestorePressedColor(pressedCell);
+            pressedCell = null;
         }
 
         gameOver = true;

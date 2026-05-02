@@ -85,10 +85,13 @@ public class HexMap : Map
             int r = item.r;
             Vector3 pos = item.pos + offset;
 
-            var obj = Instantiate(cellPrefab, pos, Quaternion.identity, transform);
+            var obj = PoolManager.instance.hex.Require();
+            obj.transform.SetParent(transform);
+            obj.transform.position = pos;
             obj.transform.localScale = cellSize * Vector3.one;
-
             var cell = obj.GetComponent<Cell>();
+            cell.Init();
+
             int i = q + radius;
             int j = r + radius;
             cells[i, j] = cell;

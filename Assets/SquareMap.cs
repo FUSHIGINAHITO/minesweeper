@@ -7,6 +7,9 @@ public class SquareMap : Map
 
     protected override void GenerateGrid()
     {
+        gridWidth = Mathf.Max(1, Mathf.FloorToInt(worldWidth / cellSize));
+        gridHeight = Mathf.Max(1, Mathf.FloorToInt(worldHeight / cellSize));
+
         var centerWorld = (bottomLeft + topRight) * 0.5f;
         var origin = new Vector3(
             centerWorld.x - (gridWidth - 1) * cellSize * 0.5f,
@@ -21,11 +24,14 @@ public class SquareMap : Map
             for (int y = 0; y < gridHeight; y++)
             {
                 var position = origin + new Vector3(x * cellSize, y * cellSize, 0f);
-                var obj = Instantiate(cellPrefab, position, Quaternion.identity, transform);
 
+                var obj = PoolManager.instance.square.Require();
+                obj.transform.SetParent(transform);
+                obj.transform.position = position;
                 obj.transform.localScale = cellSize * Vector3.one;
-
                 var cell = obj.GetComponent<Cell>();
+                cell.Init();
+
                 cells[x, y] = cell;
                 cellList.Add(cell);
                 cell.i = x;

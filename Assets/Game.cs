@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
 public class Game : MonoBehaviour
 {
@@ -11,73 +9,47 @@ public class Game : MonoBehaviour
 
     public Map map;
 
-    public TMP_Text restMine;
-    public TMP_Text timer;
-    public Image image;
-
-    public Sprite normalSprite;
-    public Sprite holdSprite;
-    public Sprite victorySprite;
-    public Sprite defeatSprite;
-
-    public Color[] colors;
-
-    // 格子颜色配置
-    public Color defaultColor;
-    public Color pressedColor;
-    public Color chordColor;
-    public Color chordColorFlag;
-    public Color flagColor;
-    public Color revealedColor;
-    public Color mineColor;
-    public Color bombMineColor;
-    public Color wrongFlagColor;
-
-    // 胜利背景颜色（可在 Inspector 中调整）
-    public Color victoryColor;
-    public Color defeatColor;
+    public MainDataSO so;
 
     // 按下/松开相关
     private Cell pressedCell;
     private Color pressedOriginalColor;
 
-    // Chord（左右独立）相关
+    // Chord 相关
     private bool leftChordActive;
     private Cell leftChordTarget;
-    private HashSet<Cell> leftHighlighted = new HashSet<Cell>();
+    private HashSet<Cell> leftHighlighted = new();
 
     private bool rightChordActive;
     private Cell rightChordTarget;
-    private HashSet<Cell> rightHighlighted = new HashSet<Cell>();
+    private HashSet<Cell> rightHighlighted = new();
 
-    // 游戏结束标志
+    // 游戏状态
     private bool gameOver = false;
 
     // 计时与剩余雷数
     private int flaggedCount = 0;
     private float elapsedTime = 0f;
     private bool timerRunning = false;
-    
+
     private void Awake()
     {
         _instance = this;
     }
 
+    // 初始化地图与 UI
     private void Start()
     {
         map.Generate();
 
-        // 初始化格子颜色（由 Game 控制视觉样式）
         foreach (var c in map.cellList)
         {
-            c.image.color = defaultColor;
+            c.image.color = so.defaultColor;
         }
 
-        // 初始化 UI
-        UpdateRestMine();
-        UpdateTimerText();
-
-        image.sprite = normalSprite;
+        UIManager.instance.UpdateRestMine(map.totalMineCount - flaggedCount);
+        UIManager.instance.UpdateTimer(elapsedTime);
+        UIManager.instance.SetFaceNormal();
     }
 
     private void Update()
@@ -93,92 +65,88 @@ public class Game : MonoBehaviour
             return;
         }
 
-        // 更新计时器
+        // 计时器
         if (timerRunning)
         {
             elapsedTime += Time.deltaTime;
-            UpdateTimerText();
+            UIManager.instance.UpdateTimer(elapsedTime);
         }
 
-        var cam = Camera.main;
+        var cam = UIManager.instance.mainCamera;
 
-        // 分别检测左右键对应的 chord 是否应该结束
+        // 检查 chord 结束
         if (leftChordActive && !Input.GetMouseButton(0))
         {
-            DeactivateChord(true, false); // 左键 chord 结束
-        }
-        if (rightChordActive && !Input.GetMouseButton(1))
-        {
-            DeactivateChord(true, true); // 右键 chord 结束
+            DeactivateChord(true, false);
         }
 
-        // 右键：在数字格上触发右键 chord（高亮已标雷），否则切换旗子（仅在未按左键时）
+        if (rightChordActive && !Input.GetMouseButton(1))
+        {
+            DeactivateChord(true, true);
+        }
+
+        // 右键处理：已显示数字则触发右键 chord，否则切换旗子（若未按左键）
         if (Input.GetMouseButtonDown(1))
         {
             Ray ray = cam.ScreenPointToRay(Input.mousePosition);
             var hit2D = Physics2D.GetRayIntersection(ray);
-            if (hit2D.collider == null)
-            {
-                return;
-            }
-            var clicked = hit2D.collider.GetComponentInParent<Cell>();
-            if (clicked == null)
-            {
-                return;
-            }
 
-            // 重要：如果点击的是已显示的数字格，总是触发右键 chord（即使左键被按住）
-            if (clicked.isShown && clicked.value > 0)
+            if (hit2D.collider != null)
             {
-                ActivateChord(clicked, true); // 右键 chord
-            }
-            else
-            {
-                // 非数字格时仍然只在左键未按住时切换旗子（避免与左键冲突）
-                if (!Input.GetMouseButton(0))
+                var clicked = hit2D.collider.GetComponentInParent<Cell>();
+
+                if (clicked != null)
                 {
-                    ToggleFlag(clicked);
+                    if (clicked.isShown && clicked.value > 0)
+                    {
+                        ActivateChord(clicked, true);
+                    }
+                    else
+                    {
+                        if (!Input.GetMouseButton(0))
+                        {
+                            ToggleFlag(clicked);
+                        }
+                    }
                 }
             }
         }
 
-        // 左键按下：开始计时（如尚未开始），数字格触发 chord（高亮未标雷），否则标记为按下（变灰）
+        // 左键按下：开始计时或触发左键 chord，或标记按下格子
         if (Input.GetMouseButtonDown(0))
         {
             if (!timerRunning)
             {
                 timerRunning = true;
                 elapsedTime = 0f;
-                UpdateTimerText();
+                UIManager.instance.UpdateTimer(elapsedTime);
             }
 
             Ray ray = cam.ScreenPointToRay(Input.mousePosition);
             var hit2D = Physics2D.GetRayIntersection(ray);
-            if (hit2D.collider == null)
-            {
-                return;
-            }
-            var clicked = hit2D.collider.GetComponentInParent<Cell>();
-            if (clicked == null)
-            {
-                return;
-            }
 
-            if (clicked.isShown && clicked.value > 0)
+            if (hit2D.collider != null)
             {
-                ActivateChord(clicked, false); // 左键 chord
-            }
-            else if (!clicked.isShown && !clicked.isFlagged)
-            {
-                pressedCell = clicked;
-                pressedOriginalColor = pressedCell.image.color;
-                pressedCell.image.color = pressedColor;
+                var clicked = hit2D.collider.GetComponentInParent<Cell>();
 
-                image.sprite = holdSprite;
+                if (clicked != null)
+                {
+                    if (clicked.isShown && clicked.value > 0)
+                    {
+                        ActivateChord(clicked, false);
+                    }
+                    else if (!clicked.isShown && !clicked.isFlagged)
+                    {
+                        pressedCell = clicked;
+                        pressedOriginalColor = pressedCell.image.color;
+                        pressedCell.image.color = so.pressedColor;
+                        UIManager.instance.SetFaceHold();
+                    }
+                }
             }
         }
 
-        // 左键松开：在按下位置触发操作（首次点击触发布雷）
+        // 左键松开：首次点击触发布雷并揭开
         if (Input.GetMouseButtonUp(0))
         {
             if (pressedCell != null)
@@ -186,8 +154,7 @@ public class Game : MonoBehaviour
                 if (!map.minesPlaced)
                 {
                     map.PlaceMinesAvoiding(pressedCell);
-
-                    UpdateRestMine();
+                    UIManager.instance.UpdateRestMine(map.totalMineCount - flaggedCount);
                 }
 
                 if (pressedCell.isFlagged)
@@ -207,20 +174,15 @@ public class Game : MonoBehaviour
 
                 if (!gameOver)
                 {
-                    image.sprite = normalSprite;
+                    UIManager.instance.SetFaceNormal();
                 }
             }
         }
     }
 
-    // isRightChord: true = 右键 chord（高亮已标雷且未显示），false = 左键 chord（高亮未标雷且未显示）
+    // 激活 chord：高亮邻居并显示按下表情
     private void ActivateChord(Cell numberCell, bool isRightChord)
     {
-        if (numberCell == null)
-        {
-            return;
-        }
-
         if (isRightChord)
         {
             if (rightChordActive)
@@ -236,7 +198,7 @@ public class Game : MonoBehaviour
             {
                 if (!n.isShown && n.isFlagged)
                 {
-                    n.image.color = chordColorFlag;
+                    n.image.color = so.chordColorFlag;
                     rightHighlighted.Add(n);
                 }
             }
@@ -256,17 +218,16 @@ public class Game : MonoBehaviour
             {
                 if (!n.isShown && !n.isFlagged)
                 {
-                    n.image.color = chordColor;
+                    n.image.color = so.chordColor;
                     leftHighlighted.Add(n);
                 }
             }
         }
 
-        // 如果任意一侧 chord 激活则显示按下表情
-        image.sprite = holdSprite;
+        UIManager.instance.SetFaceHold();
     }
 
-    // applyAutoFlag：是否执行自动标雷与后续扫开；isRightChord 指明释放哪一侧 chord
+    // 取消 chord：恢复高亮并根据需要自动标雷或扫开
     private void DeactivateChord(bool applyAutoFlag, bool isRightChord)
     {
         if (isRightChord)
@@ -276,55 +237,17 @@ public class Game : MonoBehaviour
                 return;
             }
 
-            // 恢复右侧高亮的格子（但如果左侧仍在高亮，则保留左侧颜色）
-            foreach (var n in rightHighlighted)
-            {
-                if (n == null)
-                {
-                    continue;
-                }
-                if (n.isShown)
-                {
-                    continue;
-                }
-                if (leftHighlighted.Contains(n))
-                {
-                    // 左侧仍在高亮，跳过恢复
-                    continue;
-                }
-                n.image.color = n.isFlagged ? flagColor : defaultColor;
-            }
+            // 恢复高亮颜色（跳过被另一侧高亮的格子）
+            RestoreHighlightedColors(rightHighlighted, leftHighlighted);
 
-            var targets = new List<Cell>();
-            if (rightChordTarget != null)
-            {
-                foreach (var n in rightChordTarget.neighbours)
-                {
-                    if (!n.isShown)
-                    {
-                        targets.Add(n);
-                    }
-                }
-            }
+            // 收集 targets
+            var targets = GetUnshownNeighbors(rightChordTarget);
 
-            // 右键 chord 默认不启用自动标雷（传入的 applyAutoFlag 通常为 false）
-            if (applyAutoFlag && targets.Count > 0)
-            {
-                if (targets.Count == rightChordTarget.value)
-                {
-                    foreach (var t in targets)
-                    {
-                        if (!t.isShown && !t.isFlagged)
-                        {
-                            t.isFlagged = true;
-                            t.image.color = flagColor;
-                            flaggedCount++;
-                        }
-                    }
+            // 自动标旗（如果条件满足）
+            ApplyAutoFlagIfNeeded(rightChordTarget, targets, applyAutoFlag);
 
-                    UpdateRestMine();
-                }
-            }
+            // 若剩余地雷为 0，自动揭开安全格子（与左键一致）
+            AutoRevealIfNoRemainingMines(rightChordTarget, targets);
 
             rightHighlighted.Clear();
             rightChordTarget = null;
@@ -337,99 +260,130 @@ public class Game : MonoBehaviour
                 return;
             }
 
-            // 恢复左侧高亮的格子（但如果右侧仍在高亮，则保留右侧颜色）
-            foreach (var n in leftHighlighted)
-            {
-                if (n == null)
-                {
-                    continue;
-                }
-                if (n.isShown)
-                {
-                    continue;
-                }
-                if (rightHighlighted.Contains(n))
-                {
-                    // 右侧仍在高亮，跳过恢复
-                    continue;
-                }
-                n.image.color = n.isFlagged ? flagColor : defaultColor;
-            }
+            // 恢复高亮颜色（跳过被另一侧高亮的格子）
+            RestoreHighlightedColors(leftHighlighted, rightHighlighted);
 
-            var targets = new List<Cell>();
-            if (leftChordTarget != null)
-            {
-                foreach (var n in leftChordTarget.neighbours)
-                {
-                    if (!n.isShown)
-                    {
-                        targets.Add(n);
-                    }
-                }
-            }
+            // 收集 targets
+            var targets = GetUnshownNeighbors(leftChordTarget);
 
-            if (applyAutoFlag && targets.Count > 0)
-            {
-                // 只有在“周围未扫开的格数等于理论上的雷数”时才自动标雷
-                if (targets.Count == leftChordTarget.value)
-                {
-                    foreach (var t in targets)
-                    {
-                        if (!t.isShown && !t.isFlagged)
-                        {
-                            t.isFlagged = true;
-                            t.image.color = flagColor;
-                            flaggedCount++;
-                        }
-                    }
+            // 自动标旗（如果条件满足）
+            ApplyAutoFlagIfNeeded(leftChordTarget, targets, applyAutoFlag);
 
-                    UpdateRestMine();
-                }
-            }
-
-            if (targets.Count > 0)
-            {
-                // 如果已标的雷数等于该数字的理论雷数，则尝试扫开剩下的未标邻居（可能触雷）
-                int flaggedNeighbors = 0;
-                if (leftChordTarget != null)
-                {
-                    foreach (var n in leftChordTarget.neighbours)
-                    {
-                        if (n.isFlagged)
-                        {
-                            flaggedNeighbors++;
-                        }
-                    }
-                }
-
-                int remainingMines = (leftChordTarget != null ? leftChordTarget.value : 0) - flaggedNeighbors;
-
-                if (remainingMines == 0)
-                {
-                    foreach (var t in targets)
-                    {
-                        if (gameOver)
-                        {
-                            break;
-                        }
-
-                        if (!t.isShown && !t.isFlagged)
-                        {
-                            RevealRecursive(t);
-                        }
-                    }
-                }
-            }
+            // 若剩余地雷为 0，自动揭开安全格子
+            AutoRevealIfNoRemainingMines(leftChordTarget, targets);
 
             leftHighlighted.Clear();
             leftChordTarget = null;
             leftChordActive = false;
         }
 
-        // 若任意 chord 仍在激活则保持按下表情，否则恢复正常表情
         if (!leftChordActive && !rightChordActive && !gameOver)
         {
-            image.sprite = normalSprite;
+            UIManager.instance.SetFaceNormal();
+        }
+    }
+
+    // 恢复高亮区的颜色（跳过已显示、为 null 或被另一侧高亮的格子）
+    private void RestoreHighlightedColors(HashSet<Cell> highlighted, HashSet<Cell> otherHighlighted)
+    {
+        foreach (var n in highlighted)
+        {
+            if (n == null)
+            {
+                continue;
+            }
+
+            if (n.isShown)
+            {
+                continue;
+            }
+
+            if (otherHighlighted.Contains(n))
+            {
+                continue;
+            }
+
+            n.image.color = n.isFlagged ? so.flagColor : so.defaultColor;
+        }
+    }
+
+    // 返回 chord 目标的所有未显示邻居
+    private List<Cell> GetUnshownNeighbors(Cell chordTarget)
+    {
+        var list = new List<Cell>();
+
+        if (chordTarget != null)
+        {
+            foreach (var n in chordTarget.neighbours)
+            {
+                if (!n.isShown)
+                {
+                    list.Add(n);
+                }
+            }
+        }
+
+        return list;
+    }
+
+    // 自动标旗（保留原有逻辑：targets.Count == chordTarget.value）
+    private void ApplyAutoFlagIfNeeded(Cell chordTarget, List<Cell> targets, bool applyAutoFlag)
+    {
+        if (!applyAutoFlag || targets.Count == 0 || chordTarget == null)
+        {
+            return;
+        }
+
+        if (targets.Count == chordTarget.value)
+        {
+            foreach (var t in targets)
+            {
+                if (!t.isShown && !t.isFlagged)
+                {
+                    t.isFlagged = true;
+                    t.image.color = so.flagColor;
+                    flaggedCount++;
+                }
+            }
+
+            UIManager.instance.UpdateRestMine(map.totalMineCount - flaggedCount);
+        }
+    }
+
+    // 当剩余地雷为 0 时，自动揭开安全邻居
+    private void AutoRevealIfNoRemainingMines(Cell chordTarget, List<Cell> targets)
+    {
+        if (targets.Count == 0 || chordTarget == null)
+        {
+            return;
+        }
+
+        int flaggedNeighbors = 0;
+
+        foreach (var n in chordTarget.neighbours)
+        {
+            if (n.isFlagged)
+            {
+                flaggedNeighbors++;
+            }
+        }
+
+        int remainingMines = chordTarget.value - flaggedNeighbors;
+
+        if (remainingMines == 0)
+        {
+            foreach (var t in targets)
+            {
+                if (gameOver)
+                {
+                    break;
+                }
+
+                if (!t.isShown && !t.isFlagged)
+                {
+                    RevealRecursive(t);
+                }
+            }
         }
     }
 
@@ -437,13 +391,14 @@ public class Game : MonoBehaviour
     {
         if (cell.isFlagged)
         {
-            cell.image.color = flagColor;
+            cell.image.color = so.flagColor;
             return;
         }
 
         cell.image.color = pressedOriginalColor;
     }
 
+    // 切换旗子并更新计数显示
     private void ToggleFlag(Cell cell)
     {
         if (gameOver)
@@ -460,15 +415,15 @@ public class Game : MonoBehaviour
 
         if (cell.isFlagged)
         {
-            cell.image.color = flagColor;
+            cell.image.color = so.flagColor;
             flaggedCount++;
-            UpdateRestMine();
+            UIManager.instance.UpdateRestMine(map.totalMineCount - flaggedCount);
             return;
         }
 
-        cell.image.color = defaultColor;
+        cell.image.color = so.defaultColor;
         flaggedCount--;
-        UpdateRestMine();
+        UIManager.instance.UpdateRestMine(map.totalMineCount - flaggedCount);
     }
 
     private void Reveal(Cell cell)
@@ -485,11 +440,11 @@ public class Game : MonoBehaviour
 
         cell.isShown = true;
 
-        cell.image.color = cell.isMine ? mineColor : revealedColor;
+        cell.image.color = cell.isMine ? so.mineColor : so.revealedColor;
 
         cell.text.gameObject.SetActive(true);
         cell.text.text = cell.isMine ? string.Empty : (cell.value > 0 ? cell.value.ToString() : string.Empty);
-        cell.text.color = colors[Mathf.Clamp(cell.value, 0, colors.Length - 1)];
+        cell.text.color = so.colors[Mathf.Clamp(cell.value, 0, so.colors.Length - 1)];
 
         if (cell.isMine)
         {
@@ -539,6 +494,7 @@ public class Game : MonoBehaviour
         }
     }
 
+    // 游戏失败：展示雷并更新 UI
     private void GameOver(Cell exploded)
     {
         if (gameOver)
@@ -546,11 +502,9 @@ public class Game : MonoBehaviour
             return;
         }
 
-        // 先取消所有未结算的 chord 操作，恢复被高亮的格子颜色，避免后续结算时颜色冲突
-        DeactivateChord(false, true);  // 取消右键 chord（不执行自动标雷）
-        DeactivateChord(false, false); // 取消左键 chord（不执行自动标雷）
+        DeactivateChord(false, true);
+        DeactivateChord(false, false);
 
-        // 若存在按下但未松开的格子，恢复其颜色
         if (pressedCell != null)
         {
             RestorePressedColor(pressedCell);
@@ -565,24 +519,24 @@ public class Game : MonoBehaviour
             if (c.isMine)
             {
                 c.isShown = true;
-                c.image.color = mineColor;
+                c.image.color = so.mineColor;
             }
             else
             {
                 if (c.isFlagged && !c.isMine)
                 {
-                    c.image.color = wrongFlagColor;
+                    c.image.color = so.wrongFlagColor;
                 }
             }
         }
 
-        exploded.image.color = bombMineColor;
-        Camera.main.backgroundColor = defeatColor;
+        exploded.image.color = so.bombMineColor;
 
-        image.sprite = defeatSprite;
+        UIManager.instance.SetBackgroundColor(so.defeatColor);
+        UIManager.instance.SetFaceDefeat();
     }
 
-    // 检查是否胜利：所有非雷格被扫开
+    // 检查胜利并更新 UI
     private void CheckWin()
     {
         foreach (var c in map.cellList)
@@ -593,11 +547,9 @@ public class Game : MonoBehaviour
             }
         }
 
-        // 先取消所有未结算的 chord 操作，恢复被高亮的格子颜色，避免后续结算时颜色冲突
-        DeactivateChord(false, true);  // 取消右键 chord（不执行自动标雷）
-        DeactivateChord(false, false); // 取消左键 chord（不执行自动标雷）
+        DeactivateChord(false, true);
+        DeactivateChord(false, false);
 
-        // 若存在按下但未松开的格子，恢复其颜色
         if (pressedCell != null)
         {
             RestorePressedColor(pressedCell);
@@ -607,23 +559,21 @@ public class Game : MonoBehaviour
         gameOver = true;
         timerRunning = false;
 
-        // 胜利时把所有雷都标为旗子并更新显示
         foreach (var c in map.cellList)
         {
             if (c.isMine && !c.isFlagged)
             {
                 c.isFlagged = true;
-                c.image.color = flagColor;
+                c.image.color = so.flagColor;
             }
             else if (!c.isMine && c.isFlagged)
             {
-                // 如果之前误标的旗子，保持其颜色为 wrongFlagColor（可按需修改）
-                c.image.color = wrongFlagColor;
+                c.image.color = so.wrongFlagColor;
             }
         }
 
-        // 重新计算已标记数并刷新剩余雷数显示
         flaggedCount = 0;
+
         foreach (var c in map.cellList)
         {
             if (c.isFlagged)
@@ -631,23 +581,10 @@ public class Game : MonoBehaviour
                 flaggedCount++;
             }
         }
-        UpdateRestMine();
 
-        Camera.main.backgroundColor = victoryColor;
-
-        image.sprite = victorySprite;
-    }
-
-    // 更新剩余雷数显示（总雷数 - 已标记）
-    private void UpdateRestMine()
-    {
-        restMine.text = (map.totalMineCount - flaggedCount).ToString();
-    }
-
-    // 更新计时器显示（秒）
-    private void UpdateTimerText()
-    {
-        timer.text = Mathf.FloorToInt(elapsedTime).ToString();
+        UIManager.instance.UpdateRestMine(map.totalMineCount - flaggedCount);
+        UIManager.instance.SetBackgroundColor(so.victoryColor);
+        UIManager.instance.SetFaceVictory();
     }
 
     public void Restart()

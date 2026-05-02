@@ -272,6 +272,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 736062788}
+  - component: {fileID: 736062789}
   - component: {fileID: 736062787}
   - component: {fileID: 736062786}
   - component: {fileID: 736062785}
@@ -367,6 +368,22 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &736062789
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 736062784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 173ab075374a81b41925c6e6f9e007a8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mainCamera: {fileID: 519420031}
+  restMine: {fileID: 1135703351}
+  timer: {fileID: 1540734188}
+  faceImage: {fileID: 1330567993}
 --- !u!1 &915419150
 GameObject:
   m_ObjectHideFlags: 0
@@ -426,7 +443,7 @@ GameObject:
   - component: {fileID: 1135703352}
   - component: {fileID: 1135703351}
   m_Layer: 5
-  m_Name: Text (TMP)
+  m_Name: Rest Mine
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -471,7 +488,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: Rest Mine
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 19e8183da725ed649b2875f91226a0dd, type: 2}
   m_sharedMaterial: {fileID: 8954866038269987599, guid: 19e8183da725ed649b2875f91226a0dd, type: 2}
@@ -859,7 +876,7 @@ GameObject:
   - component: {fileID: 1540734189}
   - component: {fileID: 1540734188}
   m_Layer: 5
-  m_Name: Text (TMP) (1)
+  m_Name: Timer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -904,7 +921,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: New Text
+  m_text: 'Timer
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 19e8183da725ed649b2875f91226a0dd, type: 2}
   m_sharedMaterial: {fileID: 8954866038269987599, guid: 19e8183da725ed649b2875f91226a0dd, type: 2}
@@ -1078,38 +1097,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   map: {fileID: 1622874313}
-  colors:
-  - {r: 0, g: 0, b: 0, a: 0}
-  - {r: 0, g: 0, b: 1, a: 1}
-  - {r: 0, g: 0.46226418, b: 0, a: 1}
-  - {r: 0.764151, g: 0, b: 0, a: 1}
-  - {r: 0.04071733, g: 0.04071733, b: 0.5754717, a: 1}
-  - {r: 0.49056602, g: 0.2584864, b: 0.108757555, a: 1}
-  - {r: 0, g: 0.70483863, b: 0.7264151, a: 1}
-  - {r: 0.13207549, g: 0.13207549, b: 0.13207549, a: 1}
-  - {r: 0.6132076, g: 0.6132076, b: 0.6132076, a: 1}
-  - {r: 0.7562283, g: 0.12517802, b: 0.9150943, a: 1}
-  - {r: 0.8962264, g: 0.5476848, b: 0.080322154, a: 1}
-  - {r: 0.11160557, g: 0.7169812, b: 0.28736135, a: 1}
-  - {r: 0.7411765, g: 0.019607857, b: 0.43064472, a: 1}
-  restMine: {fileID: 1135703351}
-  timer: {fileID: 1540734188}
-  image: {fileID: 1330567993}
-  normalSprite: {fileID: 21300000, guid: ed0352580915ce349ae02a3cba8928bd, type: 3}
-  holdSprite: {fileID: 21300000, guid: 46c4f72a64233a94bbd87c8d8cf75093, type: 3}
-  victorySprite: {fileID: 21300000, guid: a14e0eefab8d3ef46894867014194d0d, type: 3}
-  defeatSprite: {fileID: 21300000, guid: 8ca6b90ae01ffd34695964b547a8d40b, type: 3}
-  defaultColor: {r: 0.74509805, g: 0.74509805, b: 0.74509805, a: 1}
-  pressedColor: {r: 0.41509432, g: 0.41509432, b: 0.41509432, a: 1}
-  chordColor: {r: 0.41568628, g: 0.41568628, b: 0.41568628, a: 1}
-  chordColorFlag: {r: 0.78616345, g: 0.612008, b: 0.32385975, a: 1}
-  flagColor: {r: 1, g: 0.785967, b: 0.4292453, a: 1}
-  revealedColor: {r: 0.8, g: 0.8, b: 0.8, a: 0.5019608}
-  mineColor: {r: 1, g: 0.81069183, b: 0.7971698, a: 1}
-  bombMineColor: {r: 1, g: 0.4481132, b: 0.4481132, a: 1}
-  wrongFlagColor: {r: 0.78846896, g: 0.52198297, b: 0.9622642, a: 1}
-  victoryColor: {r: 0.9339623, g: 1, b: 0.9009434, a: 1}
-  defeatColor: {r: 1, g: 0.9103774, b: 0.9286057, a: 1}
+  so: {fileID: 11400000, guid: c811e96267f284f47aee9e38dff4d27f, type: 2}
 --- !u!1 &1622874311
 GameObject:
   m_ObjectHideFlags: 0

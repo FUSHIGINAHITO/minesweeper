@@ -38,9 +38,7 @@ public abstract class Map : MonoBehaviour
     // 生成网格并构建邻居关系（不放置地雷）
     public void Generate()
     {
-        var cam = Camera.main;
-        if (cam == null)
-            return;
+        var cam = UIManager.instance.mainCamera;
 
         float camDistance = Mathf.Abs(cam.transform.position.z);
 

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class SquareMap : Map
+public class SquareMap : TilingMap
 {
     private int gridWidth;
     private int gridHeight;
@@ -17,8 +17,6 @@ public class SquareMap : Map
             0f
         );
 
-        cells = new Cell[gridWidth, gridHeight];
-
         for (int x = 0; x < gridWidth; x++)
         {
             for (int y = 0; y < gridHeight; y++)
@@ -31,42 +29,24 @@ public class SquareMap : Map
                 cell.transform.localScale = cellSize * Vector3.one;
                 cell.Init();
 
-                cells[x, y] = cell;
                 cellList.Add(cell);
-                cell.i = x;
-                cell.j = y;
             }
         }
     }
 
-    // 为所有格子建立邻居列表
-    protected override void BuildNeighbours()
+    // 返回正方形 cell 的四个角（世界坐标）
+    protected override Vector2[] GetCellVertices(Cell c)
     {
-        for (int x = 0; x < gridWidth; x++)
+        float half = cellSize * 0.5f;
+        Vector3 pos3 = c.transform.position;
+        Vector2 center = new Vector2(pos3.x, pos3.y);
+
+        return new Vector2[]
         {
-            for (int y = 0; y < gridHeight; y++)
-            {
-                var cell = cells[x, y];
-
-                for (int dx = -1; dx <= 1; dx++)
-                {
-                    for (int dy = -1; dy <= 1; dy++)
-                    {
-                        if (dx == 0 && dy == 0)
-                        {
-                            continue;
-                        }
-
-                        int nx = x + dx;
-                        int ny = y + dy;
-
-                        if (nx >= 0 && nx < gridWidth && ny >= 0 && ny < gridHeight)
-                        {
-                            cell.neighbours.Add(cells[nx, ny]);
-                        }
-                    }
-                }
-            }
-        }
+            center + new Vector2(-half, -half),
+            center + new Vector2( half, -half),
+            center + new Vector2( half,  half),
+            center + new Vector2(-half,  half)
+        };
     }
 }

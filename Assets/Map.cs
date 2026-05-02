@@ -9,9 +9,6 @@ public abstract class Map : MonoBehaviour
     // 雷率（总格子数 * mineRatio -> 地雷数）
     [Range(0f, 1f)]
     public float mineRatio = 0.2063f;
-
-    [HideInInspector, NonSerialized]
-    public Cell[,] cells;
     [HideInInspector, NonSerialized]
     public List<Cell> cellList = new();
     [HideInInspector, NonSerialized]

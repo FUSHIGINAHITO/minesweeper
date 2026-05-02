@@ -4,8 +4,6 @@ using UnityEngine;
 
 public class Cell : MonoBehaviour
 {
-    public int i;
-    public int j;
     public int value;
     public List<Cell> neighbours = new();
     public bool isRevealed;
@@ -18,8 +16,6 @@ public class Cell : MonoBehaviour
 
     public void Init()
     {
-        i = 0;
-        j = 0;
         value = 0;
         neighbours.Clear();
         isRevealed = false;

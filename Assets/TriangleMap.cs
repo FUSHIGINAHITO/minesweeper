@@ -1,14 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class TriangleMap : Map
+public class TriangleMap : TilingMap
 {
-    private int gridWidth;
-    private int gridHeight;
-
-    // 控制邻居判定方式：false = 共享顶点为邻居（原行为），true = 共享边为邻居
-    public bool useSharedEdges = false;
-
     // 每个小三角形的边长被视为 cellSize（用于网格布局计算）
     protected override void GenerateGrid()
     {
@@ -35,8 +29,7 @@ public class TriangleMap : Map
         if (n < 1)
             n = 1;
 
-        // 构建网格节点（用于精确共享顶点判定）
-        // 节点行 t = 0..n，行 t 有 t+1 个节点
+        // 构建网格节点（用于精确定位三角形重心）
         var nodePositions = new List<Vector3>();
         var nodeIndex = new Dictionary<(int t, int u), int>();
 
@@ -55,7 +48,6 @@ public class TriangleMap : Map
 
         // 构建小三角形（按行），并记录它们使用的节点索引与方向（true = 向上, false = 向下）
         var trianglesNodes = new List<int[]>(); // 每个三角形的三个节点索引
-        var triangleRowIndex = new List<(int row, int indexInRow)>(); // 用于 cells[,] 映射
         var triangleUp = new List<bool>(); // 方向标记
 
         for (int rNode = 0; rNode < n; rNode++)
@@ -68,19 +60,17 @@ public class TriangleMap : Map
                 int b = nodeIndex[(rNode + 1, u)];
                 int c = nodeIndex[(rNode + 1, u + 1)];
                 trianglesNodes.Add(new int[] { a, b, c });
-                triangleRowIndex.Add((rNode, indexInRow));
                 triangleUp.Add(true);
                 indexInRow++;
             }
 
-            // 向下三角形（count = rNode）， 修正：使用节点 (r, u), (r, u+1), (r+1, u+1)
+            // 向下三角形（count = rNode）， 使用节点 (r, u), (r, u+1), (r+1, u+1)
             for (int u = 0; u <= rNode - 1; u++)
             {
                 int a = nodeIndex[(rNode, u)];
                 int b = nodeIndex[(rNode, u + 1)];
                 int c = nodeIndex[(rNode + 1, u + 1)];
                 trianglesNodes.Add(new int[] { a, b, c });
-                triangleRowIndex.Add((rNode, indexInRow));
                 triangleUp.Add(false);
                 indexInRow++;
             }
@@ -99,7 +89,6 @@ public class TriangleMap : Map
         {
             centers.Add(Vector3.zero);
             trianglesNodes.Add(new int[] { 0, 0, 0 });
-            triangleRowIndex.Add((0, 0));
             triangleUp.Add(true);
         }
 
@@ -116,12 +105,7 @@ public class TriangleMap : Map
         var availableCenter = (bottomLeft + topRight) * 0.5f;
         Vector3 offset = availableCenter - gridCenter;
 
-        // 分配 cells[,]，我们使用 gridWidth = n, gridHeight = 2*n 以容纳每行最多 2*row+1 个三角形（最大 < 2*n）
-        gridWidth = Mathf.Max(1, n);
-        gridHeight = Mathf.Max(1, 2 * n);
-        cells = new Cell[gridWidth, gridHeight];
-
-        // 实例化并记录映射：triangle index -> Cell
+        // 实例化并记录映射：triangle index -> Cell（本地变量即可）
         var triangleToCell = new Cell[trianglesNodes.Count];
 
         for (int tIdx = 0; tIdx < centers.Count; tIdx++)
@@ -130,7 +114,6 @@ public class TriangleMap : Map
             Vector3 worldPos = centers[tIdx] + offset;
 
             float rotZ = triangleUp[tIdx] ? 0f : 180f;
-            // 将用户可调偏移应用到最终位置（世界单位）
             Vector3 applyPos = worldPos;
 
             var cell = PoolManager.instance.triangle.Require();
@@ -141,166 +124,30 @@ public class TriangleMap : Map
 
             triangleToCell[tIdx] = cell;
             cellList.Add(cell);
-
-            var (row, idxInRow) = triangleRowIndex[tIdx];
-            int i = row;
-            int j = idxInRow;
-            // bounds check (should be safe)
-            if (i >= 0 && i < gridWidth && j >= 0 && j < gridHeight)
-            {
-                cells[i, j] = cell;
-            }
-
-            cell.i = i;
-            cell.j = j;
         }
-
-        // 保存节点和三角形拓扑信息到字段（在 BuildNeighbours 中使用）
-        this._nodePositions = nodePositions;
-        this._trianglesNodes = trianglesNodes;
-        this._triangleToCell = triangleToCell;
-        this._triangleUp = triangleUp;
-        this._centers = centers;
     }
 
-    // 存储用于 BuildNeighbours 的中间结构
-    private List<Vector3> _nodePositions = new();
-    private List<int[]> _trianglesNodes = new();
-    private Cell[] _triangleToCell = new Cell[0];
-    private List<bool> _triangleUp = new();
-    private List<Vector3> _centers = new();
-
-    // 建立邻居：根据 useSharedEdges 决定使用共享顶点还是共享边作为邻居判定
-    protected override void BuildNeighbours()
+    // 返回该 cell 的三个顶点（世界坐标）
+    protected override Vector2[] GetCellVertices(Cell c)
     {
-        int triCount = _trianglesNodes.Count;
-        if (triCount == 0)
-            return;
+        // 边长 s，三角形高度 h
+        float s = cellSize;
+        float h = Mathf.Sqrt(3f) * 0.5f * s;
 
-        if (!useSharedEdges)
-        {
-            // 原有行为：共享顶点为邻居
-            // 构建节点 -> 三角形列表映射
-            var nodeToTriangles = new Dictionary<int, List<int>>();
-            for (int t = 0; t < triCount; t++)
-            {
-                var tri = _trianglesNodes[t];
-                foreach (var nodeIdx in tri)
-                {
-                    if (!nodeToTriangles.TryGetValue(nodeIdx, out var list))
-                    {
-                        list = new List<int>();
-                        nodeToTriangles[nodeIdx] = list;
-                    }
-                    list.Add(t);
-                }
-            }
+        // 相对于三角形重心的顶点（向上三角形的局部坐标）
+        // 顶点到重心的距离：顶点方向为 +y: 2h/3；底部顶点在 y = -h/3
+        Vector2 vTop = new Vector2(0f, 2f * h / 3f);
+        Vector2 vBL = new Vector2(-s * 0.5f, -h / 3f);
+        Vector2 vBR = new Vector2(s * 0.5f, -h / 3f);
 
-            // 对每个三角形，邻居集合为所有共享任一节点的三角形（去重并排除自身）
-            for (int t = 0; t < triCount; t++)
-            {
-                var cell = _triangleToCell[t];
-                if (cell == null)
-                    continue;
+        // 将局部顶点旋转并平移到世界坐标（使用 transform.rotation）
+        Quaternion rot = c.transform.rotation;
+        Vector2 center = new Vector2(c.transform.position.x, c.transform.position.y);
 
-                var neighboursSet = new HashSet<Cell>();
-                var tri = _trianglesNodes[t];
-                foreach (var nodeIdx in tri)
-                {
-                    if (nodeToTriangles.TryGetValue(nodeIdx, out var linkedTris))
-                    {
-                        foreach (var lt in linkedTris)
-                        {
-                            if (lt == t)
-                                continue;
-                            var nc = _triangleToCell[lt];
-                            if (nc != null)
-                            {
-                                neighboursSet.Add(nc);
-                            }
-                        }
-                    }
-                }
+        Vector2 wTop = center + (Vector2)(rot * vTop);
+        Vector2 wBL = center + (Vector2)(rot * vBL);
+        Vector2 wBR = center + (Vector2)(rot * vBR);
 
-                foreach (var nc in neighboursSet)
-                {
-                    cell.neighbours.Add(nc);
-                }
-            }
-        }
-        else
-        {
-            // 新行为：共享边为邻居
-            // 构建边（无向） -> 三角形列表映射，边以 (min,max) 的节点索引对表示
-            var edgeToTriangles = new Dictionary<(int a, int b), List<int>>();
-            for (int t = 0; t < triCount; t++)
-            {
-                var tri = _trianglesNodes[t];
-                // 三条边
-                var edges = new (int, int)[]
-                {
-                    (tri[0], tri[1]),
-                    (tri[1], tri[2]),
-                    (tri[2], tri[0])
-                };
-
-                foreach (var e in edges)
-                {
-                    int a = e.Item1, b = e.Item2;
-                    if (a > b)
-                        (a, b) = (b, a);
-                    var key = (a, b);
-                    if (!edgeToTriangles.TryGetValue(key, out var list))
-                    {
-                        list = new List<int>();
-                        edgeToTriangles[key] = list;
-                    }
-                    list.Add(t);
-                }
-            }
-
-            // 对每个三角形，邻居集合为所有共享任一边的三角形（去重并排除自身）
-            for (int t = 0; t < triCount; t++)
-            {
-                var cell = _triangleToCell[t];
-                if (cell == null)
-                    continue;
-
-                var neighboursSet = new HashSet<Cell>();
-                var tri = _trianglesNodes[t];
-                var edges = new (int, int)[]
-                {
-                    (tri[0], tri[1]),
-                    (tri[1], tri[2]),
-                    (tri[2], tri[0])
-                };
-
-                foreach (var e in edges)
-                {
-                    int a = e.Item1, b = e.Item2;
-                    if (a > b)
-                        (a, b) = (b, a);
-                    var key = (a, b);
-                    if (edgeToTriangles.TryGetValue(key, out var linkedTris))
-                    {
-                        foreach (var lt in linkedTris)
-                        {
-                            if (lt == t)
-                                continue;
-                            var nc = _triangleToCell[lt];
-                            if (nc != null)
-                            {
-                                neighboursSet.Add(nc);
-                            }
-                        }
-                    }
-                }
-
-                foreach (var nc in neighboursSet)
-                {
-                    cell.neighbours.Add(nc);
-                }
-            }
-        }
+        return new Vector2[] { wTop, wBR, wBL };
     }
 }

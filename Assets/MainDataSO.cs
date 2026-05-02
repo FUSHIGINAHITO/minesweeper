@@ -1,8 +1,15 @@
+using System;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "MainDataSO", menuName = "Minesweeper/MainData", order = 0)]
 public class MainDataSO : ScriptableObject
 {
+    [Header("屏幕边缘留白（百分比）")]
+    public float marginLeftPercent = 0.01f;
+    public float marginRightPercent = 0.01f;
+    public float marginTopPercent = 0.05f;
+    public float marginBottomPercent = 0.01f;
+
     public Color[] colors;
 
     [Header("格子颜色配置")]
@@ -10,6 +17,7 @@ public class MainDataSO : ScriptableObject
     public Color pressedColor;
     public Color chordColor;
     public Color chordColorFlag;
+    public Color chordColorRevealed;
     public Color flagColor;
     public Color revealedColor;
     public Color mineColor;
@@ -23,6 +31,7 @@ public class MainDataSO : ScriptableObject
     public Sprite defeatSprite;
 
     [Header("界面背景色")]
+    public Color normalBgColor;
     public Color victoryColor;
     public Color defeatColor;
 }

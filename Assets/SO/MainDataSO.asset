@@ -12,6 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3effde318c07854baf658c13154de4e, type: 3}
   m_Name: MainDataSO
   m_EditorClassIdentifier: 
+  marginLeftPercent: 0.01
+  marginRightPercent: 0.01
+  marginTopPercent: 0.05
+  marginBottomPercent: 0.01
   colors:
   - {r: 0, g: 0, b: 0, a: 0}
   - {r: 0, g: 0, b: 1, a: 1}
@@ -30,6 +34,7 @@ MonoBehaviour:
   pressedColor: {r: 0.41568628, g: 0.41568628, b: 0.41568628, a: 1}
   chordColor: {r: 0.41568628, g: 0.41568628, b: 0.41568628, a: 1}
   chordColorFlag: {r: 0.78431374, g: 0.6117647, b: 0.3254902, a: 1}
+  chordColorRevealed: {r: 0.8, g: 0.8, b: 0.8, a: 0.5019608}
   flagColor: {r: 1, g: 0.78431374, b: 0.42745098, a: 1}
   revealedColor: {r: 0.8, g: 0.8, b: 0.8, a: 0.5019608}
   mineColor: {r: 1, g: 0.8117647, b: 0.79607844, a: 1}
@@ -39,5 +44,6 @@ MonoBehaviour:
   holdSprite: {fileID: 21300000, guid: 46c4f72a64233a94bbd87c8d8cf75093, type: 3}
   victorySprite: {fileID: 21300000, guid: a14e0eefab8d3ef46894867014194d0d, type: 3}
   defeatSprite: {fileID: 21300000, guid: 8ca6b90ae01ffd34695964b547a8d40b, type: 3}
+  normalBgColor: {r: 0.9137255, g: 0.9137255, b: 0.9137255, a: 1}
   victoryColor: {r: 0.93333334, g: 1, b: 0.9019608, a: 1}
   defeatColor: {r: 1, g: 0.9098039, b: 0.92941177, a: 1}

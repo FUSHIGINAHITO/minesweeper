@@ -1,5 +1,6 @@
-using UnityEngine;
+using System.Drawing;
 using TMPro;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
@@ -18,45 +19,40 @@ public class UIManager : MonoBehaviour
         _instance = this;
     }
 
-    // 更新剩余雷数显示
-    public void UpdateRestMine(int remaining)
+    private void Update()
     {
+        var remaining = Game.instance.map.totalMineCount - Game.instance.flaggedCount;
         restMine.text = remaining.ToString();
+
+        timer.text = Mathf.FloorToInt(Game.instance.elapsedTime).ToString();
+
+        if (!Game.instance.gameOver)
+        {
+            if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+            {
+                faceImage.sprite = Game.instance.so.holdSprite;
+            }
+            else
+            {
+                faceImage.sprite = Game.instance.so.normalSprite;
+            }
+        }
     }
 
-    // 更新计时显示（秒）
-    public void UpdateTimer(float elapsedSeconds)
-    {
-        timer.text = Mathf.FloorToInt(elapsedSeconds).ToString();
-    }
-
-    // 表情：正常
-    public void SetFaceNormal()
-    {
-        faceImage.sprite = Game.instance.so.normalSprite;
-    }
-
-    // 表情：按下
-    public void SetFaceHold()
-    {
-        faceImage.sprite = Game.instance.so.holdSprite;
-    }
-
-    // 表情：胜利
-    public void SetFaceVictory()
+    public void Victory()
     {
         faceImage.sprite = Game.instance.so.victorySprite;
+        mainCamera.backgroundColor = Game.instance.so.victoryColor;
     }
 
-    // 表情：失败
-    public void SetFaceDefeat()
+    public void Defeat()
     {
         faceImage.sprite = Game.instance.so.defeatSprite;
+        mainCamera.backgroundColor = Game.instance.so.defeatColor;
     }
 
-    // 设置背景色
-    public void SetBackgroundColor(Color color)
+    public void GameStart()
     {
-        mainCamera.backgroundColor = color;
+        mainCamera.backgroundColor = Game.instance.so.normalBgColor;
     }
 }

@@ -25,11 +25,10 @@ public class SquareMap : Map
             {
                 var position = origin + new Vector3(x * cellSize, y * cellSize, 0f);
 
-                var obj = PoolManager.instance.square.Require();
-                obj.transform.SetParent(transform);
-                obj.transform.position = position;
-                obj.transform.localScale = cellSize * Vector3.one;
-                var cell = obj.GetComponent<Cell>();
+                var cell = PoolManager.instance.square.Require();
+                cell.transform.SetParent(transform);
+                cell.transform.position = position;
+                cell.transform.localScale = cellSize * Vector3.one;
                 cell.Init();
 
                 cells[x, y] = cell;

@@ -4,7 +4,7 @@ using UnityEngine;
 public class PoolManager : MonoBehaviour
 {
     public static PoolManager instance => _instance;
-    public static PoolManager _instance;
+    private static PoolManager _instance;
 
     public CellPool triangle;
     public CellPool square;

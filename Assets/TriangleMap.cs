@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class TriangleMap : Map
 {
@@ -33,7 +32,8 @@ public class TriangleMap : Map
             }
         }
 
-        if (n < 1) n = 1;
+        if (n < 1)
+            n = 1;
 
         // 构建网格节点（用于精确共享顶点判定）
         // 节点行 t = 0..n，行 t 有 t+1 个节点
@@ -133,11 +133,10 @@ public class TriangleMap : Map
             // 将用户可调偏移应用到最终位置（世界单位）
             Vector3 applyPos = worldPos;
 
-            var obj = PoolManager.instance.triangle.Require();
-            obj.transform.SetParent(transform);
-            obj.transform.SetPositionAndRotation(applyPos, Quaternion.Euler(0f, 0f, rotZ));
-            obj.transform.localScale = cellSize * Vector3.one;
-            var cell = obj.GetComponent<Cell>();
+            var cell = PoolManager.instance.triangle.Require();
+            cell.transform.SetParent(transform);
+            cell.transform.SetPositionAndRotation(applyPos, Quaternion.Euler(0f, 0f, rotZ));
+            cell.transform.localScale = cellSize * Vector3.one;
             cell.Init();
 
             triangleToCell[tIdx] = cell;
@@ -181,7 +180,8 @@ public class TriangleMap : Map
         }
 
         int triCount = _trianglesNodes.Count;
-        if (triCount == 0) return;
+        if (triCount == 0)
+            return;
 
         if (!useSharedEdges)
         {
@@ -206,7 +206,8 @@ public class TriangleMap : Map
             for (int t = 0; t < triCount; t++)
             {
                 var cell = _triangleToCell[t];
-                if (cell == null) continue;
+                if (cell == null)
+                    continue;
 
                 var neighboursSet = new HashSet<Cell>();
                 var tri = _trianglesNodes[t];
@@ -216,7 +217,8 @@ public class TriangleMap : Map
                     {
                         foreach (var lt in linkedTris)
                         {
-                            if (lt == t) continue;
+                            if (lt == t)
+                                continue;
                             var nc = _triangleToCell[lt];
                             if (nc != null)
                             {
@@ -251,7 +253,8 @@ public class TriangleMap : Map
                 foreach (var e in edges)
                 {
                     int a = e.Item1, b = e.Item2;
-                    if (a > b) (a, b) = (b, a);
+                    if (a > b)
+                        (a, b) = (b, a);
                     var key = (a, b);
                     if (!edgeToTriangles.TryGetValue(key, out var list))
                     {
@@ -266,7 +269,8 @@ public class TriangleMap : Map
             for (int t = 0; t < triCount; t++)
             {
                 var cell = _triangleToCell[t];
-                if (cell == null) continue;
+                if (cell == null)
+                    continue;
 
                 var neighboursSet = new HashSet<Cell>();
                 var tri = _trianglesNodes[t];
@@ -280,13 +284,15 @@ public class TriangleMap : Map
                 foreach (var e in edges)
                 {
                     int a = e.Item1, b = e.Item2;
-                    if (a > b) (a, b) = (b, a);
+                    if (a > b)
+                        (a, b) = (b, a);
                     var key = (a, b);
                     if (edgeToTriangles.TryGetValue(key, out var linkedTris))
                     {
                         foreach (var lt in linkedTris)
                         {
-                            if (lt == t) continue;
+                            if (lt == t)
+                                continue;
                             var nc = _triangleToCell[lt];
                             if (nc != null)
                             {

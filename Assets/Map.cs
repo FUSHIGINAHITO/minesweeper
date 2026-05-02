@@ -10,16 +10,6 @@ public abstract class Map : MonoBehaviour
     [Range(0f, 1f)]
     public float mineRatio = 0.2063f;
 
-    // ÆÁÄ»±ßÔµÁô°×£¨°Ù·Ö±È£©
-    [HideInInspector, NonSerialized]
-    public float marginLeftPercent = 0.01f;
-    [HideInInspector, NonSerialized]
-    public float marginRightPercent = 0.01f;
-    [HideInInspector, NonSerialized]
-    public float marginTopPercent = 0.05f;
-    [HideInInspector, NonSerialized]
-    public float marginBottomPercent = 0.01f;
-
     [HideInInspector, NonSerialized]
     public Cell[,] cells;
     [HideInInspector, NonSerialized]
@@ -39,13 +29,14 @@ public abstract class Map : MonoBehaviour
     public void Generate()
     {
         var cam = UIManager.instance.mainCamera;
+        var so = Game.instance.so;
 
         float camDistance = Mathf.Abs(cam.transform.position.z);
 
-        float ml = Mathf.Clamp01(marginLeftPercent);
-        float mr = Mathf.Clamp01(marginRightPercent);
-        float mt = Mathf.Clamp01(marginTopPercent);
-        float mb = Mathf.Clamp01(marginBottomPercent);
+        float ml = Mathf.Clamp01(so.marginLeftPercent);
+        float mr = Mathf.Clamp01(so.marginRightPercent);
+        float mt = Mathf.Clamp01(so.marginTopPercent);
+        float mb = Mathf.Clamp01(so.marginBottomPercent);
 
         if (ml + mr >= 0.99f)
         {
@@ -126,6 +117,57 @@ public abstract class Map : MonoBehaviour
         {
             int j = UnityEngine.Random.Range(0, i + 1);
             (list[j], list[i]) = (list[i], list[j]);
+        }
+    }
+
+    public bool Win()
+    {
+        foreach (var c in cellList)
+        {
+            if (!c.isMine && !c.isRevealed)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public void ShowRestMines(Cell exploded)
+    {
+        var so = Game.instance.so;
+        foreach (var c in cellList)
+        {
+            if (c.isMine && !c.isFlagged)
+            {
+                c.isRevealed = true;
+                c.image.color = so.mineColor;
+            }
+            else if (c.isFlagged && !c.isMine)
+            {
+                c.image.color = so.wrongFlagColor;
+            }
+        }
+
+        exploded.image.color = so.bombMineColor;
+    }
+
+    public void FlagRestMines()
+    {
+        foreach (var c in cellList)
+        {
+            if (c.isMine && !c.isFlagged)
+            {
+                c.Flag();
+            }
+        }
+    }
+
+    public void Return()
+    {
+        foreach (var cell in cellList)
+        {
+            cell.Return();
         }
     }
 }

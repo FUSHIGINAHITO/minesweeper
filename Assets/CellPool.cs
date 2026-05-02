@@ -12,26 +12,15 @@ public class CellPool : MonoBehaviour
     [SerializeField] private GameObject cellPrefab;
     [SerializeField] private int initialSize = 100;
     [SerializeField] private bool expandIfNeeded = true;
-    [SerializeField] private Transform parentWhenInactive;
 
     [Header("Debug")]
-    [Tooltip("池中当前可用实例数量（运行时由代码更新）")]
     [SerializeField] private int availableCount;
+    [SerializeField] private int totalCount;
 
-    private readonly Queue<GameObject> pool = new Queue<GameObject>();
+    private readonly Queue<Cell> pool = new();
 
     private void Awake()
     {
-        if (parentWhenInactive == null)
-            parentWhenInactive = transform;
-
-        if (cellPrefab == null)
-        {
-            Debug.LogError($"{nameof(CellPool)}: cellPrefab 未设置。");
-            availableCount = 0;
-            return;
-        }
-
         Preload(initialSize);
     }
 
@@ -42,9 +31,9 @@ public class CellPool : MonoBehaviour
     {
         for (int i = 0; i < count; i++)
         {
-            var go = Instantiate(cellPrefab, parentWhenInactive);
-            go.SetActive(false);
-            pool.Enqueue(go);
+            var cell = CreateInstance();
+            cell.gameObject.SetActive(false);
+            pool.Enqueue(cell);
         }
 
         SyncAvailableCount();
@@ -54,7 +43,7 @@ public class CellPool : MonoBehaviour
     /// 从池中获取一个实例（激活）。当池为空且允许扩展时会新建实例。
     /// 返回 null 表示无法提供（未设置 prefab 且无法扩展）。
     /// </summary>
-    public GameObject Require()
+    public Cell Require()
     {
         if (cellPrefab == null)
         {
@@ -62,16 +51,15 @@ public class CellPool : MonoBehaviour
             return null;
         }
 
-        GameObject obj;
+        Cell cell;
         if (pool.Count > 0)
         {
-            obj = pool.Dequeue();
-            obj.SetActive(true);
+            cell = pool.Dequeue();
+            cell.gameObject.SetActive(true);
         }
         else if (expandIfNeeded)
         {
-            obj = Instantiate(cellPrefab, parentWhenInactive);
-            obj.SetActive(true);
+            cell = CreateInstance();
         }
         else
         {
@@ -79,41 +67,27 @@ public class CellPool : MonoBehaviour
         }
 
         SyncAvailableCount();
-        return obj;
+        return cell;
+    }
+
+    private Cell CreateInstance()
+    {
+        var go = Instantiate(cellPrefab, transform);
+        var cell = go.GetComponent<Cell>();
+        cell.pool = this;
+        totalCount++;
+        return cell;
     }
 
     /// <summary>
     /// 将实例归还到池中：置为 inactive 并移动到指定父物体下以便组织场景层级。
     /// 不执行 Destroy，从而避免频繁分配/释放开销。
     /// </summary>
-    public void Return(GameObject obj)
+    public void Return(Cell cell)
     {
-        if (obj == null)
-            return;
-
-        obj.SetActive(false);
-        obj.transform.SetParent(parentWhenInactive, false);
-        pool.Enqueue(obj);
-        SyncAvailableCount();
-    }
-
-    /// <summary>
-    /// 可选：清空池（不销毁实例，仅清空队列并将现有子对象置为 inactive 并归位）
-    /// 若需要真正释放资源，可在此处调用 Destroy，但当前实现保持实例以便重用。
-    /// </summary>
-    public void ReturnAllActiveChildren()
-    {
-        // 将 parent 下的所有子对象（除未归还的池内对象）归入池，避免额外销毁
-        for (int i = parentWhenInactive.childCount - 1; i >= 0; i--)
-        {
-            var child = parentWhenInactive.GetChild(i).gameObject;
-            if (child.activeSelf)
-            {
-                child.SetActive(false);
-                pool.Enqueue(child);
-            }
-        }
-
+        cell.gameObject.SetActive(false);
+        cell.transform.SetParent(transform, false);
+        pool.Enqueue(cell);
         SyncAvailableCount();
     }
 

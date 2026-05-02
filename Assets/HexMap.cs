@@ -124,8 +124,6 @@ public class HexMap : Map
                     continue;
                 }
 
-                cell.neighbours.Clear();
-
                 // ×ª»Ø axial ×ø±ê
                 int q = i - radius;
                 int r = j - radius;

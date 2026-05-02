@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class Game : MonoBehaviour
 {
     public static Game instance => _instance;
     private static Game _instance;
 
-    public Map map;
     public MainDataSO so;
+
+    private Map[] maps;
+    private Map map;
 
     private class ChordData
     {
@@ -37,7 +38,7 @@ public class Game : MonoBehaviour
     [HideInInspector, NonSerialized]
     public bool gameOver = false;
     [HideInInspector, NonSerialized]
-    public int flaggedCount = 0;
+    public int restMineCount = 0;
     [HideInInspector, NonSerialized]
     public float elapsedTime = 0f;
     private bool timerRunning = false;
@@ -46,6 +47,8 @@ public class Game : MonoBehaviour
     private void Awake()
     {
         _instance = this;
+
+        maps = GetComponentsInChildren<Map>();
     }
 
     // 初始化地图与 UI
@@ -119,7 +122,7 @@ public class Game : MonoBehaviour
                         cell.ToggleFlag();
                         if (cell.isFlagged)
                         {
-                            flaggedCount++;
+                            restMineCount--;
                         }
                         else
                         {
@@ -128,7 +131,7 @@ public class Game : MonoBehaviour
                                 cell.Pressed();
                             }
 
-                            flaggedCount--;
+                            restMineCount++;
                         }
                     }
                 }
@@ -245,7 +248,7 @@ public class Game : MonoBehaviour
                 if (!t.isRevealed && !t.isFlagged)
                 {
                     t.Flag();
-                    flaggedCount++;
+                    restMineCount--;
                 }
             }
         }
@@ -339,7 +342,7 @@ public class Game : MonoBehaviour
         GameOver();
 
         map.FlagRestMines();
-        flaggedCount = map.totalMineCount;
+        restMineCount = 0;
 
         UIManager.instance.Victory();
     }
@@ -360,11 +363,16 @@ public class Game : MonoBehaviour
         DeactivateChord(false);
         pressedCell = null;
 
-        map.Return();
+        if (map != null)
+        {
+            map.Return();
+        }
+
+        map = maps[UnityEngine.Random.Range(0, maps.Length)];
         map.Generate();
 
         gameOver = false;
-        flaggedCount = 0;
+        restMineCount = map.totalMineCount;
         elapsedTime = 0;
         timerRunning = false;
 

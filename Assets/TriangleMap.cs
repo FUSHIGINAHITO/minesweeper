@@ -173,12 +173,6 @@ public class TriangleMap : Map
     // 建立邻居：根据 useSharedEdges 决定使用共享顶点还是共享边作为邻居判定
     protected override void BuildNeighbours()
     {
-        // 清空所有 cell 的 neighbours
-        foreach (var c in cellList)
-        {
-            c.neighbours.Clear();
-        }
-
         int triCount = _trianglesNodes.Count;
         if (triCount == 0)
             return;

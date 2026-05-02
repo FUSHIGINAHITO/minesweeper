@@ -400,7 +400,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &915419151
 Transform:
   m_ObjectHideFlags: 0
@@ -428,7 +428,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecbf26cb1737648449c470803ab15422, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 0.2
+  cellSize: 1
   mineRatio: 0.15
   useSharedEdges: 0
 --- !u!1 &1135703349
@@ -1096,7 +1096,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4478c7c87e0a9ce4d9887bd04e5dbdb9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  map: {fileID: 915419152}
   so: {fileID: 11400000, guid: c811e96267f284f47aee9e38dff4d27f, type: 2}
 --- !u!1 &1622874311
 GameObject:
@@ -1142,7 +1141,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc1641889bd034a4c990980bee70a4b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 0.2
+  cellSize: 0.5
   mineRatio: 0.2063
 --- !u!1 &1996488309
 GameObject:
@@ -1160,7 +1159,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1996488310
 Transform:
   m_ObjectHideFlags: 0
@@ -1188,7 +1187,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d2375395aeb1b7446bbfb7f6c326af5b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 0.2
+  cellSize: 1
   mineRatio: 0.22
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

@@ -21,9 +21,7 @@ public class UIManager : MonoBehaviour
 
     private void Update()
     {
-        var remaining = Game.instance.map.totalMineCount - Game.instance.flaggedCount;
-        restMine.text = remaining.ToString();
-
+        restMine.text = Game.instance.restMineCount.ToString();
         timer.text = Mathf.FloorToInt(Game.instance.elapsedTime).ToString();
 
         if (!Game.instance.gameOver)

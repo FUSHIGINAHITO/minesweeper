@@ -63,8 +63,10 @@ public abstract class Map : MonoBehaviour
         GenerateGrid();
         BuildNeighbours();
 
-        totalMineCount = Mathf.RoundToInt(cellList.Count * mineRatio);
+        totalMineCount = Mathf.Min(Mathf.RoundToInt(cellList.Count * mineRatio), cellList.Count - 1);
         minesPlaced = false;
+
+        Shuffle(cellList);
     }
 
     abstract protected void GenerateGrid();
@@ -75,16 +77,15 @@ public abstract class Map : MonoBehaviour
     // 在第一次点击时放置地雷（避免 firstClicked）
     public void PlaceMinesAvoiding(Cell firstClicked)
     {
-        var candidates = new List<Cell>(cellList);
-
-        candidates.Remove(firstClicked);
-        totalMineCount = Mathf.Min(totalMineCount, candidates.Count);
-
-        Shuffle(candidates);
-
         for (int i = 0; i < totalMineCount; i++)
         {
-            candidates[i].isMine = true;
+            cellList[i].isMine = true;
+        }
+
+        if (firstClicked.isMine)
+        {
+            firstClicked.isMine = false;
+            cellList[totalMineCount].isMine = true;
         }
 
         minesPlaced = true;
@@ -96,17 +97,13 @@ public abstract class Map : MonoBehaviour
     {
         foreach (var cell in cellList)
         {
-            int adjacentMines = 0;
-
             foreach (var neighbour in cell.neighbours)
             {
                 if (neighbour.isMine)
                 {
-                    adjacentMines++;
+                    cell.value++;
                 }
             }
-
-            cell.value = adjacentMines;
         }
     }
 

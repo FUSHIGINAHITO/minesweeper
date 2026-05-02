@@ -47,7 +47,6 @@ public class SquareMap : Map
             for (int y = 0; y < gridHeight; y++)
             {
                 var cell = cells[x, y];
-                cell.neighbours.Clear();
 
                 for (int dx = -1; dx <= 1; dx++)
                 {

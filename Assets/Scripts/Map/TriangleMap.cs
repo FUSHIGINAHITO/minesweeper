@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEditor.PlayerSettings;
 
 public class TriangleMap : TilingMap
 {
+    public override CellShapeType BaselineShape => CellShapeType.Triangle;
+
     protected override void GenerateGrid()
     {
         float s = cellSize;

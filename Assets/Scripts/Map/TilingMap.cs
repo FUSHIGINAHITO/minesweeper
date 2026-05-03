@@ -6,6 +6,9 @@ public abstract class TilingMap : Map
 {
     protected virtual float VertexQuantizeScale => Mathf.Max(1f, 1f / cellSize) * 1000f;
 
+    // 拾取桶大小：默认用 cellSize，可按地图类型覆写
+    protected virtual float PickBucketSize => Mathf.Max(1e-4f, cellSize);
+
     protected struct VertexKey : IEquatable<VertexKey>
     {
         public readonly long x;
@@ -21,6 +24,24 @@ public abstract class TilingMap : Map
         public override bool Equals(object obj) => obj is VertexKey k && Equals(k);
         public override int GetHashCode() => ((int)(x * 397)) ^ (int)y;
     }
+
+    private struct BucketKey : IEquatable<BucketKey>
+    {
+        public readonly int x;
+        public readonly int y;
+
+        public BucketKey(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+
+        public bool Equals(BucketKey other) => x == other.x && y == other.y;
+        public override bool Equals(object obj) => obj is BucketKey k && Equals(k);
+        public override int GetHashCode() => (x * 397) ^ y;
+    }
+
+    private readonly Dictionary<BucketKey, List<Cell>> pickBuckets = new();
 
     protected VertexKey Quantize(Vector2 v)
     {
@@ -87,24 +108,41 @@ public abstract class TilingMap : Map
 
     public override bool TryGetCellAtWorld(Vector2 worldPos, out Cell cell)
     {
-        for (int i = 0; i < cellList.Count; i++)
+        float bucketSize = PickBucketSize;
+        int bx = Mathf.FloorToInt(worldPos.x / bucketSize);
+        int by = Mathf.FloorToInt(worldPos.y / bucketSize);
+
+        // 查 3x3 邻域，避免边界浮点误差漏检
+        for (int oy = -1; oy <= 1; oy++)
         {
-            var c = cellList[i];
-            var verts = GetCellVertices(c);
-            if (verts.Length == 0)
+            for (int ox = -1; ox <= 1; ox++)
             {
-                continue;
-            }
+                var key = new BucketKey(bx + ox, by + oy);
+                if (!pickBuckets.TryGetValue(key, out var candidates))
+                {
+                    continue;
+                }
 
-            if (!c.cachedAabb.Contains(new Vector3(worldPos.x, worldPos.y, 0f)))
-            {
-                continue;
-            }
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    var c = candidates[i];
+                    var verts = GetCellVertices(c);
+                    if (verts.Length == 0)
+                    {
+                        continue;
+                    }
 
-            if (IsPointInPolygon(worldPos, verts))
-            {
-                cell = c;
-                return true;
+                    if (!c.cachedAabb.Contains(new Vector3(worldPos.x, worldPos.y, 0f)))
+                    {
+                        continue;
+                    }
+
+                    if (IsPointInPolygon(worldPos, verts))
+                    {
+                        cell = c;
+                        return true;
+                    }
+                }
             }
         }
 
@@ -115,6 +153,9 @@ public abstract class TilingMap : Map
     protected override void BuildNeighbours()
     {
         var vertexMap = new Dictionary<VertexKey, List<Cell>>();
+
+        pickBuckets.Clear();
+        float bucketSize = PickBucketSize;
 
         foreach (var c in cellList)
         {
@@ -130,6 +171,28 @@ public abstract class TilingMap : Map
                 }
 
                 list.Add(c);
+            }
+
+            // 建拾取桶（按 AABB 覆盖到多个桶）
+            var b = c.cachedAabb;
+            int minX = Mathf.FloorToInt(b.min.x / bucketSize);
+            int maxX = Mathf.FloorToInt(b.max.x / bucketSize);
+            int minY = Mathf.FloorToInt(b.min.y / bucketSize);
+            int maxY = Mathf.FloorToInt(b.max.y / bucketSize);
+
+            for (int y = minY; y <= maxY; y++)
+            {
+                for (int x = minX; x <= maxX; x++)
+                {
+                    var bk = new BucketKey(x, y);
+                    if (!pickBuckets.TryGetValue(bk, out var bucket))
+                    {
+                        bucket = new List<Cell>(8);
+                        pickBuckets[bk] = bucket;
+                    }
+
+                    bucket.Add(c);
+                }
             }
         }
 

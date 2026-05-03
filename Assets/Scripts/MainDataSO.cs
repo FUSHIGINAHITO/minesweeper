@@ -37,4 +37,6 @@ public class MainDataSO : ScriptableObject
     public Color normalBgColor;
     public Color victoryColor;
     public Color defeatColor;
+
+    public float textSize;
 }

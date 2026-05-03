@@ -58,3 +58,4 @@ MonoBehaviour:
   normalBgColor: {r: 0.9137255, g: 0.9137255, b: 0.9137255, a: 1}
   victoryColor: {r: 0.93333334, g: 1, b: 0.9019608, a: 1}
   defeatColor: {r: 1, g: 0.9098039, b: 0.92941177, a: 1}
+  textSize: 0.59

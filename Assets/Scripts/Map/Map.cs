@@ -6,14 +6,20 @@ public abstract class Map : MonoBehaviour
 {
     public float cellSize = 0.2f;
 
+    /// <summary>
+    /// 密铺中内接圆最小的cell的类型
+    /// </summary>
+    public abstract CellShapeType BaselineShape
+    {
+        get;
+    }
+    [HideInInspector, NonSerialized] public float textSize;
+
     [Range(0f, 1f)]
     public float mineRatio = 0.2063f;
-    [HideInInspector, NonSerialized]
-    public List<Cell> cellList = new();
-    [HideInInspector, NonSerialized]
-    public int totalMineCount;
-    [HideInInspector, NonSerialized]
-    public bool minesPlaced = false;
+    [HideInInspector, NonSerialized] public List<Cell> cellList = new();
+    [HideInInspector, NonSerialized] public int totalMineCount;
+    [HideInInspector, NonSerialized] public bool minesPlaced = false;
 
     protected Vector3 bottomLeft;
     protected Vector3 topRight;
@@ -25,6 +31,8 @@ public abstract class Map : MonoBehaviour
     {
         var cam = UIManager.instance.mainCamera;
         var so = Game.instance.so;
+
+        textSize = PoolManager.instance.GetSharedInradiusRatio(BaselineShape) * cellSize * so.textSize;
 
         float camDistance = Mathf.Abs(cam.transform.position.z);
 

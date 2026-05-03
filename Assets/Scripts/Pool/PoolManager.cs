@@ -10,11 +10,13 @@ public class PoolManager : MonoBehaviour
     public CellPool cellPool;
 
     private readonly List<Vector2[]> sharedLocalVertices = new();
+    private readonly List<float> sharedInradiusRatios = new();
 
     private void Awake()
     {
         _instance = this;
         BuildSharedLocalVertices();
+        BuildSharedInradiusRatios();
     }
 
     public Cell RequireCell(CellShapeType cellShapeType, Vector3 pos, Quaternion rot, float scale)
@@ -29,6 +31,11 @@ public class PoolManager : MonoBehaviour
         return sharedLocalVertices[(int)shapeType];
     }
 
+    public float GetSharedInradiusRatio(CellShapeType shapeType)
+    {
+        return sharedInradiusRatios[(int)shapeType];
+    }
+
     private void BuildSharedLocalVertices()
     {
         sharedLocalVertices.Clear();
@@ -36,6 +43,20 @@ public class PoolManager : MonoBehaviour
         for (int n = 3; n <= 12; n++)
         {
             sharedLocalVertices.Add(BuildRegularPolygonVertices(n, 1f));
+        }
+    }
+
+    private void BuildSharedInradiusRatios()
+    {
+        sharedInradiusRatios.Clear();
+
+        // 以正三角形为基准，ratio(3) = 1
+        float baseInradius = BuildRegularPolygonInradius(3, 1f);
+
+        for (int n = 3; n <= 12; n++)
+        {
+            float inradius = BuildRegularPolygonInradius(n, 1f);
+            sharedInradiusRatios.Add(inradius / baseInradius);
         }
     }
 
@@ -62,5 +83,16 @@ public class PoolManager : MonoBehaviour
         }
 
         return vertices;
+    }
+
+    private static float BuildRegularPolygonInradius(int n, float size)
+    {
+        if (n < 3)
+        {
+            return 0f;
+        }
+
+        // 边长 s -> 内接圆半径 r = s / (2 * tan(pi / n))
+        return size / (2f * Mathf.Tan(Mathf.PI / n));
     }
 }

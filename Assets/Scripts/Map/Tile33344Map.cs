@@ -6,6 +6,8 @@ using UnityEngine;
 /// </summary>
 public class Tile33344Map : TilingMap
 {
+    public override CellShapeType BaselineShape => CellShapeType.Triangle;
+
     protected override void GenerateGrid()
     {
         float s = cellSize;

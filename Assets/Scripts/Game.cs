@@ -11,7 +11,7 @@ public class Game : MonoBehaviour
     public MainDataSO so;
 
     private Map[] maps;
-    private Map map;
+    [HideInInspector, NonSerialized] public Map map;
     private int curId;
 
     private class ChordData
@@ -37,12 +37,9 @@ public class Game : MonoBehaviour
     private ChordData rightChord = new();
     private Cell pressedCell;
 
-    [HideInInspector, NonSerialized]
-    public bool gameOver = false;
-    [HideInInspector, NonSerialized]
-    public int restMineCount = 0;
-    [HideInInspector, NonSerialized]
-    public float elapsedTime = 0f;
+    [HideInInspector, NonSerialized] public bool gameOver = false;
+    [HideInInspector, NonSerialized] public int restMineCount = 0;
+    [HideInInspector, NonSerialized] public float elapsedTime = 0f;
     private bool timerRunning = false;
     private Stack<Cell> stack = new();
 

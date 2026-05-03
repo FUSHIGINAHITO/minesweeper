@@ -4,6 +4,8 @@ using UnityEngine.UIElements;
 
 public class HexMap : TilingMap
 {
+    public override CellShapeType BaselineShape => CellShapeType.Hex;
+
     private int radius;
 
     protected override void GenerateGrid()

@@ -65,6 +65,7 @@ public class Cell : CellPool.PoolObj
             {
                 text = PoolManager.instance.textPool.Require();
                 text.transform.SetPositionAndRotation(transform.position, Quaternion.identity);
+                text.transform.localScale = Game.instance.map.textSize * Vector3.one;
                 text.text.text = value.ToString();
                 text.text.color = so.colors[Mathf.Clamp(value, 0, so.colors.Length - 1)];
             }

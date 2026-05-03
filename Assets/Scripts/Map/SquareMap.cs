@@ -4,6 +4,8 @@ public class SquareMap : TilingMap
 {
     private int gridWidth;
     private int gridHeight;
+    
+    public override CellShapeType BaselineShape => CellShapeType.Square;
 
     protected override void GenerateGrid()
     {

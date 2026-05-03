@@ -12,6 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3effde318c07854baf658c13154de4e, type: 3}
   m_Name: MainDataSO
   m_EditorClassIdentifier: 
+  polygonSprites:
+  - {fileID: 21300000, guid: 1ebda113a8b511c45a1d95d38cc98e7d, type: 3}
+  - {fileID: 21300000, guid: c6a1ca7bf0b6a9444b719cd49b8a72eb, type: 3}
+  - {fileID: 21300000, guid: b92ac2bf50f511d4f9490c4500884d25, type: 3}
+  - {fileID: 21300000, guid: 05133677f2467474894bfd7c8eb5bbb4, type: 3}
+  - {fileID: 21300000, guid: d7a2497db0db1354f9896daff6046633, type: 3}
+  - {fileID: 21300000, guid: 3b962b1fb2af94745b62d6338f809e34, type: 3}
+  - {fileID: 21300000, guid: 0e6f243c876895d48ad40672b813207d, type: 3}
+  - {fileID: 21300000, guid: 4593807b0e74a144dac6ece508b15ca7, type: 3}
+  - {fileID: 21300000, guid: 054634eb45b5a8d4cbdf00e546229e95, type: 3}
+  - {fileID: 21300000, guid: 8d86a7243bc814546955e383ba28f4f3, type: 3}
   marginLeftPercent: 0.01
   marginRightPercent: 0.01
   marginTopPercent: 0.05
@@ -30,7 +41,7 @@ MonoBehaviour:
   - {r: 0.8962264, g: 0.5476848, b: 0.080322154, a: 1}
   - {r: 0.11160557, g: 0.7169812, b: 0.28736135, a: 1}
   - {r: 0.7411765, g: 0.019607857, b: 0.43064472, a: 1}
-  defaultColor: {r: 0.74509805, g: 0.74509805, b: 0.74509805, a: 1}
+  defaultColor: {r: 0.74509805, g: 0.74509805, b: 0.74509805, a: 0.8}
   pressedColor: {r: 0.41568628, g: 0.41568628, b: 0.41568628, a: 1}
   chordColor: {r: 0.41568628, g: 0.41568628, b: 0.41568628, a: 1}
   chordColorFlag: {r: 0.78431374, g: 0.6117647, b: 0.3254902, a: 1}

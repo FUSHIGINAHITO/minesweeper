@@ -23,10 +23,12 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
     [SerializeField] private int initialSize = 100;
 
     private readonly Queue<T> pool = new();
+    private Transform trans;
 
     private void Awake()
     {
         Preload(initialSize);
+        trans = transform;
     }
 
     /// <summary>
@@ -66,7 +68,7 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
 
     private T CreateInstance()
     {
-        var go = Instantiate(prefab, transform);
+        var go = Instantiate(prefab, trans);
         var item = go.GetComponent<T>();
         item.pool = this;
         OnReturn(item);

@@ -22,7 +22,16 @@ public abstract class TilingMap : Map
 
         public bool Equals(VertexKey other) => x == other.x && y == other.y;
         public override bool Equals(object obj) => obj is VertexKey k && Equals(k);
-        public override int GetHashCode() => ((int)(x * 397)) ^ (int)y;
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hx = (int)(x ^ (x >> 32));
+                int hy = (int)(y ^ (y >> 32));
+                return (hx * 397) ^ hy;
+            }
+        }
     }
 
     private struct BucketKey : IEquatable<BucketKey>
@@ -43,11 +52,61 @@ public abstract class TilingMap : Map
 
     private readonly Dictionary<BucketKey, List<Cell>> pickBuckets = new();
 
+    // 复用容器，减少 BuildNeighbours() 的临时分配
+    private readonly Dictionary<VertexKey, List<Cell>> vertexMap = new();
+    private readonly Stack<List<Cell>> listPool = new();
+
+    // 邻接去重：比 HashSet<ulong> 更轻量
+    private int[] neighbourSeenStamp = Array.Empty<int>();
+    private int currentSeenStamp;
+
     protected VertexKey Quantize(Vector2 v)
     {
         long qx = (long)Mathf.Round(v.x * VertexQuantizeScale);
         long qy = (long)Mathf.Round(v.y * VertexQuantizeScale);
         return new VertexKey(qx, qy);
+    }
+
+    private List<Cell> RentList(int capacity)
+    {
+        if (listPool.Count > 0)
+        {
+            var list = listPool.Pop();
+            if (list.Capacity < capacity)
+            {
+                list.Capacity = capacity;
+            }
+
+            return list;
+        }
+
+        return new List<Cell>(capacity);
+    }
+
+    private void ReturnList(List<Cell> list)
+    {
+        list.Clear();
+        listPool.Push(list);
+    }
+
+    private void ClearAndRecycle(Dictionary<VertexKey, List<Cell>> dict)
+    {
+        foreach (var kv in dict)
+        {
+            ReturnList(kv.Value);
+        }
+
+        dict.Clear();
+    }
+
+    private void ClearAndRecycle(Dictionary<BucketKey, List<Cell>> dict)
+    {
+        foreach (var kv in dict)
+        {
+            ReturnList(kv.Value);
+        }
+
+        dict.Clear();
     }
 
     protected virtual Vector2[] GetCellVertices(Cell c)
@@ -58,52 +117,103 @@ public abstract class TilingMap : Map
         }
 
         var local = PoolManager.instance.GetSharedLocalVertices(c.shapeType);
-        if (local == null || local.Count == 0)
+        int count = local.Count;
+
+        var worldVerts = c.cachedWorldVertices;
+        if (worldVerts == null || worldVerts.Length != count)
         {
-            c.cachedWorldVertices = Array.Empty<Vector2>();
-            c.cachedAabb = new Bounds(c.transform.position, Vector3.zero);
-            c.geometryDirty = false;
-            return c.cachedWorldVertices;
+            worldVerts = new Vector2[count];
+            c.cachedWorldVertices = worldVerts;
         }
 
-        if (c.cachedWorldVertices == null || c.cachedWorldVertices.Length != local.Count)
-        {
-            c.cachedWorldVertices = new Vector2[local.Count];
-        }
+        Vector3 pos3 = c.position;
+        float px = pos3.x;
+        float py = pos3.y;
+        float s = c.scale;
 
-        Vector3 p3 = c.transform.position;
-        Vector2 p = new(p3.x, p3.y);
-        float s = c.transform.localScale.x;
-        Quaternion rot = c.transform.rotation;
-
+        Quaternion rot = c.rotation;
         float sin = 2f * (rot.w * rot.z);
         float cos = 1f - 2f * (rot.z * rot.z);
         bool noRotation = Mathf.Abs(sin) < 1e-6f && Mathf.Abs(cos - 1f) < 1e-6f;
 
-        Vector2 min = new(float.PositiveInfinity, float.PositiveInfinity);
-        Vector2 max = new(float.NegativeInfinity, float.NegativeInfinity);
+        float minX = float.PositiveInfinity;
+        float minY = float.PositiveInfinity;
+        float maxX = float.NegativeInfinity;
+        float maxY = float.NegativeInfinity;
 
-        for (int i = 0; i < local.Count; i++)
+        if (noRotation)
         {
-            Vector2 v = local[i] * s;
-            Vector2 w = noRotation
-                ? p + v
-                : new Vector2(
-                    p.x + v.x * cos - v.y * sin,
-                    p.y + v.x * sin + v.y * cos
-                );
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 lv = local[i];
+                float wx = px + lv.x * s;
+                float wy = py + lv.y * s;
 
-            c.cachedWorldVertices[i] = w;
-            min = Vector2.Min(min, w);
-            max = Vector2.Max(max, w);
+                worldVerts[i] = new Vector2(wx, wy);
+
+                if (wx < minX)
+                {
+                    minX = wx;
+                }
+
+                if (wy < minY)
+                {
+                    minY = wy;
+                }
+
+                if (wx > maxX)
+                {
+                    maxX = wx;
+                }
+
+                if (wy > maxY)
+                {
+                    maxY = wy;
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 lv = local[i];
+                float vx = lv.x * s;
+                float vy = lv.y * s;
+
+                float wx = px + vx * cos - vy * sin;
+                float wy = py + vx * sin + vy * cos;
+
+                worldVerts[i] = new Vector2(wx, wy);
+
+                if (wx < minX)
+                {
+                    minX = wx;
+                }
+
+                if (wy < minY)
+                {
+                    minY = wy;
+                }
+
+                if (wx > maxX)
+                {
+                    maxX = wx;
+                }
+
+                if (wy > maxY)
+                {
+                    maxY = wy;
+                }
+            }
         }
 
-        Vector3 center = new((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f, 0f);
-        Vector3 size = new(max.x - min.x, max.y - min.y, 0f);
-        c.cachedAabb = new Bounds(center, size);
+        c.cachedAabb.SetMinMax(
+            new Vector3(minX, minY, 0f),
+            new Vector3(maxX, maxY, 0f)
+        );
 
         c.geometryDirty = false;
-        return c.cachedWorldVertices;
+        return worldVerts;
     }
 
     public override bool TryGetCellAtWorld(Vector2 worldPos, out Cell cell)
@@ -111,6 +221,9 @@ public abstract class TilingMap : Map
         float bucketSize = PickBucketSize;
         int bx = Mathf.FloorToInt(worldPos.x / bucketSize);
         int by = Mathf.FloorToInt(worldPos.y / bucketSize);
+
+        float px = worldPos.x;
+        float py = worldPos.y;
 
         // 查 3x3 邻域，避免边界浮点误差漏检
         for (int oy = -1; oy <= 1; oy++)
@@ -127,12 +240,9 @@ public abstract class TilingMap : Map
                 {
                     var c = candidates[i];
                     var verts = GetCellVertices(c);
-                    if (verts.Length == 0)
-                    {
-                        continue;
-                    }
 
-                    if (!c.cachedAabb.Contains(new Vector3(worldPos.x, worldPos.y, 0f)))
+                    var b = c.cachedAabb;
+                    if (px < b.min.x || px > b.max.x || py < b.min.y || py > b.max.y)
                     {
                         continue;
                     }
@@ -152,33 +262,94 @@ public abstract class TilingMap : Map
 
     protected override void BuildNeighbours()
     {
-        var vertexMap = new Dictionary<VertexKey, List<Cell>>();
+        ClearAndRecycle(vertexMap);
+        ClearAndRecycle(pickBuckets);
 
-        pickBuckets.Clear();
-        float bucketSize = PickBucketSize;
-
-        foreach (var c in cellList)
+        int cellCount = cellList.Count;
+        if (cellCount == 0)
         {
-            var verts = GetCellVertices(c);
+            return;
+        }
 
-            foreach (var v in verts)
+        if (neighbourSeenStamp.Length < cellCount)
+        {
+            neighbourSeenStamp = new int[cellCount];
+        }
+
+        float bucketSize = PickBucketSize;
+        float invBucketSize = 1f / bucketSize;
+        float quantizeScale = VertexQuantizeScale;
+
+        for (int ci = 0; ci < cellCount; ci++)
+        {
+            var c = cellList[ci];
+            c.tempBuildIndex = ci;
+
+            var neighbours = c.neighbours;
+            neighbours.Clear();
+
+            // 轻量预扩容，减少 neighbours.Add() 触发扩容
+            // 多数平铺图邻居数不高，8 是比较稳妥的经验值
+            if (neighbours.Capacity < 8)
             {
-                var key = Quantize(v);
+                neighbours.Capacity = 8;
+            }
+
+            currentSeenStamp++;
+            if (currentSeenStamp == int.MaxValue)
+            {
+                Array.Clear(neighbourSeenStamp, 0, cellCount);
+                currentSeenStamp = 1;
+            }
+
+            int stamp = currentSeenStamp;
+            var verts = GetCellVertices(c);
+            int vertCount = verts.Length;
+
+            // 一边建 vertexMap，一边连接邻接
+            for (int i = 0; i < vertCount; i++)
+            {
+                Vector2 v = verts[i];
+                var key = new VertexKey(
+                    (long)Mathf.Round(v.x * quantizeScale),
+                    (long)Mathf.Round(v.y * quantizeScale)
+                );
+
                 if (!vertexMap.TryGetValue(key, out var list))
                 {
-                    list = new List<Cell>();
+                    list = RentList(4);
                     vertexMap[key] = list;
+                }
+
+                for (int j = 0, listCount = list.Count; j < listCount; j++)
+                {
+                    var other = list[j];
+                    if (other == c)
+                    {
+                        continue;
+                    }
+
+                    int otherIndex = other.tempBuildIndex;
+                    if (neighbourSeenStamp[otherIndex] == stamp)
+                    {
+                        continue;
+                    }
+
+                    neighbourSeenStamp[otherIndex] = stamp;
+                    neighbours.Add(other);
+                    other.neighbours.Add(c);
                 }
 
                 list.Add(c);
             }
 
             // 建拾取桶（按 AABB 覆盖到多个桶）
-            var b = c.cachedAabb;
-            int minX = Mathf.FloorToInt(b.min.x / bucketSize);
-            int maxX = Mathf.FloorToInt(b.max.x / bucketSize);
-            int minY = Mathf.FloorToInt(b.min.y / bucketSize);
-            int maxY = Mathf.FloorToInt(b.max.y / bucketSize);
+            // 使用乘 invBucketSize 替代除法，减少热点内浮点除法成本
+            var aabb = c.cachedAabb;
+            int minX = Mathf.FloorToInt(aabb.min.x * invBucketSize);
+            int maxX = Mathf.FloorToInt(aabb.max.x * invBucketSize);
+            int minY = Mathf.FloorToInt(aabb.min.y * invBucketSize);
+            int maxY = Mathf.FloorToInt(aabb.max.y * invBucketSize);
 
             for (int y = minY; y <= maxY; y++)
             {
@@ -187,7 +358,7 @@ public abstract class TilingMap : Map
                     var bk = new BucketKey(x, y);
                     if (!pickBuckets.TryGetValue(bk, out var bucket))
                     {
-                        bucket = new List<Cell>(8);
+                        bucket = RentList(8);
                         pickBuckets[bk] = bucket;
                     }
 
@@ -196,33 +367,7 @@ public abstract class TilingMap : Map
             }
         }
 
-        foreach (var kv in vertexMap)
-        {
-            var list = kv.Value;
-            int m = list.Count;
-            for (int i = 0; i < m; i++)
-            {
-                for (int j = i + 1; j < m; j++)
-                {
-                    var a = list[i];
-                    var b = list[j];
-                    if (a == b)
-                    {
-                        continue;
-                    }
-
-                    if (!a.neighbours.Contains(b))
-                    {
-                        a.neighbours.Add(b);
-                    }
-
-                    if (!b.neighbours.Contains(a))
-                    {
-                        b.neighbours.Add(a);
-                    }
-                }
-            }
-        }
+        ClearAndRecycle(vertexMap);
     }
 
     private static bool IsPointInPolygon(Vector2 p, Vector2[] polygon)

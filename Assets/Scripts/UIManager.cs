@@ -13,6 +13,9 @@ public class UIManager : MonoBehaviour
     public TMP_Text timer;
     public Image faceImage;
 
+    private int _lastRestMine = int.MinValue;
+    private int _lastTimer = int.MinValue;
+
     private void Awake()
     {
         _instance = this;
@@ -20,8 +23,19 @@ public class UIManager : MonoBehaviour
 
     private void Update()
     {
-        restMine.text = Game.instance.restMineCount.ToString();
-        timer.text = Mathf.FloorToInt(Game.instance.elapsedTime).ToString();
+        int currentRestMine = Game.instance.restMineCount;
+        if (currentRestMine != _lastRestMine)
+        {
+            _lastRestMine = currentRestMine;
+            restMine.text = currentRestMine.ToString();
+        }
+
+        int currentTimer = Mathf.FloorToInt(Game.instance.elapsedTime);
+        if (currentTimer != _lastTimer)
+        {
+            _lastTimer = currentTimer;
+            timer.text = currentTimer.ToString();
+        }
 
         if (!Game.instance.gameOver)
         {

@@ -4,7 +4,7 @@ using UnityEngine;
 
 public abstract class Map : MonoBehaviour
 {
-    public float cellSize = 0.2f;
+    public float cellSize = 0.5f;
 
     /// <summary>
     /// 密铺中内接圆最小的cell的类型

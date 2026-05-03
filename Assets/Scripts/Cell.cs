@@ -55,19 +55,17 @@ public class Cell : CellPool.PoolObj
         trans.localScale = scale * Vector3.one;
     }
 
-    public List<Cell> GetUnshownNeighbors()
+    public void GetUnshownNeighbors(List<Cell> res)
     {
-        var list = new List<Cell>();
+        res.Clear();
 
         foreach (var n in neighbours)
         {
             if (!n.isRevealed)
             {
-                list.Add(n);
+                res.Add(n);
             }
         }
-
-        return list;
     }
 
     public void Reveal()

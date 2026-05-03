@@ -41,6 +41,7 @@ public class Game : MonoBehaviour
     [HideInInspector, NonSerialized] public float elapsedTime = 0f;
     private bool timerRunning = false;
     private Stack<Cell> stack = new();
+    private List<Cell> tmp = new();
 
     private void Awake()
     {
@@ -227,13 +228,13 @@ public class Game : MonoBehaviour
             }
 
             var cell = chordData.target;
-            var targets = cell.GetUnshownNeighbors();
+            cell.GetUnshownNeighbors(tmp);
 
             var otherData = isRightChord ? leftChord : rightChord;
             if (!gameOver && !otherData.active)
             {
-                ApplyAutoFlagIfNeeded(cell, targets);
-                AutoRevealIfNoRemainingMines(cell, targets);
+                ApplyAutoFlagIfNeeded(cell, tmp);
+                AutoRevealIfNoRemainingMines(cell, tmp);
             }
 
             chordData.Deactivate();

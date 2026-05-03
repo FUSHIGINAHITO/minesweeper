@@ -6,8 +6,7 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
 {
     public class PoolObj : MonoBehaviour
     {
-        [NonSerialized, HideInInspector]
-        public Pool<T> pool;
+        [NonSerialized, HideInInspector] public Pool<T> pool;
 
         public void Return()
         {
@@ -38,7 +37,6 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
         for (int i = 0; i < count; i++)
         {
             var cell = CreateInstance();
-            cell.gameObject.SetActive(false);
             pool.Enqueue(cell);
         }
 
@@ -55,7 +53,6 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
         if (pool.Count > 0)
         {
             item = pool.Dequeue();
-            item.gameObject.SetActive(true);
         }
         else
         {
@@ -63,6 +60,7 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
         }
 
         SyncAvailableCount();
+        OnRequire(item);
         return item;
     }
 
@@ -71,12 +69,18 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
         var go = Instantiate(prefab, transform);
         var item = go.GetComponent<T>();
         item.pool = this;
-        OnCreate(item);
+        OnReturn(item);
+
         totalCount++;
         return item;
     }
 
-    protected virtual void OnCreate(T item)
+    protected virtual void OnRequire(T item)
+    {
+
+    }
+
+    protected virtual void OnReturn(T item)
     {
 
     }
@@ -87,9 +91,9 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
     /// </summary>
     public void Return(T item)
     {
-        item.gameObject.SetActive(false);
         pool.Enqueue(item);
         SyncAvailableCount();
+        OnReturn(item);
     }
 
     /// <summary>

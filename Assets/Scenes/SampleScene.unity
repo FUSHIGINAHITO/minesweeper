@@ -475,7 +475,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecbf26cb1737648449c470803ab15422, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 0.5
+  cellSize: 3
   mineRatio: 0.15
 --- !u!1 &1135703349
 GameObject:
@@ -1088,7 +1088,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc1641889bd034a4c990980bee70a4b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 2
+  cellSize: 3
   mineRatio: 0.2063
 --- !u!1 &1731141061
 GameObject:
@@ -1134,7 +1134,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ccd4012facd7aef4494fa59ac06b2164, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 2
+  cellSize: 3
   mineRatio: 0.2063
 --- !u!1 &1996488309
 GameObject:
@@ -1180,7 +1180,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d2375395aeb1b7446bbfb7f6c326af5b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 1
+  cellSize: 3
   mineRatio: 0.22
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

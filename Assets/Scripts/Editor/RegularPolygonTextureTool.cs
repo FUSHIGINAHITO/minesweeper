@@ -8,6 +8,8 @@ public static class RegularPolygonTextureTool
     private const int MaxSides = 12;
     private const int TextureSize = 256; // 2^n
     private const int PaddingPixels = 3;
+    private const float InradiusShrink = 0.05f; // SpriteRenderer 中中心到边距离减少量（世界单位）
+    private const int Supersample = 8; // 4x4 SSAA
     private const string OutputDir = "Assets/Texture";
 
     [MenuItem("Tools/Generate Regular Polygon PNGs (Side=1, 3-12)")]
@@ -30,29 +32,30 @@ public static class RegularPolygonTextureTool
     private static void GenerateOne(int sides)
     {
         float center = TextureSize * 0.5f;
-        float radius = center - PaddingPixels - 0.5f; // keep pixels fully inside
+        float fitRadius = center - PaddingPixels - 0.5f; // 未缩小时可铺满的外接圆半径（像素）
 
-        Vector2[] vertices = BuildVertices(sides, radius);
+        float unitInradius = 1f / (2f * Mathf.Tan(Mathf.PI / sides));
+        float targetUnitInradius = Mathf.Max(1e-4f, unitInradius - InradiusShrink);
+        float shrinkFactor = targetUnitInradius / unitInradius;
+
+        float drawRadius = fitRadius * shrinkFactor;
+        Vector2[] vertices = BuildVertices(sides, drawRadius);
 
         Texture2D tex = new Texture2D(TextureSize, TextureSize, TextureFormat.RGBA32, false);
         Color32[] pixels = new Color32[TextureSize * TextureSize];
-        Color32 white = new Color32(255, 255, 255, 255);
-        Color32 clear = new Color32(0, 0, 0, 0);
 
         for (int y = 0; y < TextureSize; y++)
         {
             for (int x = 0; x < TextureSize; x++)
             {
-                float px = (x + 0.5f) - center;
-                float py = (y + 0.5f) - center;
-
-                bool inside = IsPointInPolygon(new Vector2(px, py), vertices);
-                pixels[y * TextureSize + x] = inside ? white : clear;
+                float alpha01 = CalculateCoverage(x, y, center, vertices);
+                byte a = (byte)Mathf.RoundToInt(alpha01 * 255f);
+                pixels[y * TextureSize + x] = new Color32(255, 255, 255, a);
             }
         }
 
         tex.SetPixels32(pixels);
-        tex.Apply(false, false); // 改为可读，供 EncodeToPNG 使用
+        tex.Apply(false, false);
 
         string fileName = $"RegularPolygon_{sides}.png";
         string assetPath = $"{OutputDir}/{fileName}";
@@ -61,7 +64,35 @@ public static class RegularPolygonTextureTool
 
         Object.DestroyImmediate(tex);
 
-        ConfigureImporter(assetPath, sides, radius);
+        // PPU 使用未缩小前基准，保证 SpriteRenderer 下缩小量生效
+        float baseSidePixels = 2f * fitRadius * Mathf.Sin(Mathf.PI / sides);
+        ConfigureImporter(assetPath, baseSidePixels);
+    }
+
+    private static float CalculateCoverage(int x, int y, float center, Vector2[] vertices)
+    {
+        int insideCount = 0;
+        int total = Supersample * Supersample;
+        float inv = 1f / Supersample;
+
+        for (int sy = 0; sy < Supersample; sy++)
+        {
+            for (int sx = 0; sx < Supersample; sx++)
+            {
+                float subX = x + (sx + 0.5f) * inv;
+                float subY = y + (sy + 0.5f) * inv;
+
+                float px = subX - center;
+                float py = subY - center;
+
+                if (IsPointInPolygon(new Vector2(px, py), vertices))
+                {
+                    insideCount++;
+                }
+            }
+        }
+
+        return (float)insideCount / total;
     }
 
     private static Vector2[] BuildVertices(int sides, float radius)
@@ -69,7 +100,7 @@ public static class RegularPolygonTextureTool
         Vector2[] vertices = new Vector2[sides];
         float step = Mathf.PI * 2f / sides;
 
-        // 保证“正下方是边”：让 -90° 方向落在一条边的中点方向
+        // 正下方是边
         float startAngle = -Mathf.PI * 0.5f - step * 0.5f;
 
         for (int i = 0; i < sides; i++)
@@ -81,7 +112,7 @@ public static class RegularPolygonTextureTool
         return vertices;
     }
 
-    private static void ConfigureImporter(string assetPath, int sides, float radius)
+    private static void ConfigureImporter(string assetPath, float spritePixelsPerUnit)
     {
         AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
 
@@ -91,12 +122,9 @@ public static class RegularPolygonTextureTool
             return;
         }
 
-        // 像素边长 -> 世界边长=1
-        float sidePixels = 2f * radius * Mathf.Sin(Mathf.PI / sides);
-
         importer.textureType = TextureImporterType.Sprite;
         importer.spriteImportMode = SpriteImportMode.Single;
-        importer.spritePixelsPerUnit = sidePixels;
+        importer.spritePixelsPerUnit = spritePixelsPerUnit;
         importer.spritePivot = new Vector2(0.5f, 0.5f);
 
         importer.alphaSource = TextureImporterAlphaSource.FromInput;

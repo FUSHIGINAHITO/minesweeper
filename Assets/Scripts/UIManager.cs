@@ -1,4 +1,3 @@
-using System.Drawing;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;

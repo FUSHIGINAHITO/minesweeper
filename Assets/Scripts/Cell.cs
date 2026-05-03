@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 
 public class Cell : CellPool.PoolObj
@@ -14,7 +13,7 @@ public class Cell : CellPool.PoolObj
     public SpriteRenderer image;
     [NonSerialized, HideInInspector] public TextHandler text;
 
-    [NonSerialized, HideInInspector] public CellShapeType shapeType; 
+    [NonSerialized, HideInInspector] public CellShapeType shapeType;
     [NonSerialized, HideInInspector] public Vector2[] cachedWorldVertices;
     [NonSerialized, HideInInspector] public Bounds cachedAabb;
     [NonSerialized, HideInInspector] public bool geometryDirty = true;

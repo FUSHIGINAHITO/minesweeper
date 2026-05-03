@@ -78,7 +78,7 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
 
     protected virtual void OnCreate(T item)
     {
-    
+
     }
 
     /// <summary>

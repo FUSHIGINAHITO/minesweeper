@@ -1,20 +1,26 @@
+using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
-public class Cell : MonoBehaviour
+public class Cell : CellPool.PoolObj
 {
+    [NonSerialized, HideInInspector]
     public int value;
+    [NonSerialized, HideInInspector]
     public List<Cell> neighbours = new();
+    [NonSerialized, HideInInspector]
     public bool isRevealed;
+    [NonSerialized, HideInInspector]
     public bool isMine;
+    [NonSerialized, HideInInspector]
     public bool isFlagged;
 
-    public TMP_Text text;
     public SpriteRenderer image;
-    public CellPool pool;
+    [NonSerialized, HideInInspector]
+    public TextHandler text;
 
-    public void Init()
+    public void Init(Vector3 pos, Quaternion rot, float scale)
     {
         value = 0;
         neighbours.Clear();
@@ -23,13 +29,8 @@ public class Cell : MonoBehaviour
         isFlagged = false;
         image.color = Game.instance.so.defaultColor;
 
-        text.transform.rotation = Quaternion.identity;
-        text.gameObject.SetActive(false);
-    }
-
-    public void Return()
-    {
-        pool.Return(this);
+        transform.SetPositionAndRotation(pos, rot);
+        transform.localScale = scale * Vector3.one;
     }
 
     // 返回所有未扫开的邻居
@@ -58,9 +59,10 @@ public class Cell : MonoBehaviour
 
             if (!isMine && value > 0)
             {
-                text.gameObject.SetActive(true);
-                text.text = value.ToString();
-                text.color = so.colors[Mathf.Clamp(value, 0, so.colors.Length - 1)];
+                text = PoolManager.instance.text.Require();
+                text.transform.SetPositionAndRotation(transform.position, Quaternion.identity);
+                text.text.text = value.ToString();
+                text.text.color = so.colors[Mathf.Clamp(value, 0, so.colors.Length - 1)];
             }
         }
     }

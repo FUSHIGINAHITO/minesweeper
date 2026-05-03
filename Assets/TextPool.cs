@@ -1,7 +1,8 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
-public class CellPool : Pool<Cell>
+public class TextPool : Pool<TextHandler>
 {
 
 }

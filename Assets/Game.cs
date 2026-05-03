@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 public class Game : MonoBehaviour
@@ -11,6 +12,7 @@ public class Game : MonoBehaviour
 
     private Map[] maps;
     private Map map;
+    private int curId;
 
     private class ChordData
     {
@@ -368,7 +370,8 @@ public class Game : MonoBehaviour
             map.Return();
         }
 
-        map = maps[UnityEngine.Random.Range(0, maps.Length)];
+        map = maps[curId];
+        curId = (curId + 1) % maps.Length;
         map.Generate();
 
         gameOver = false;

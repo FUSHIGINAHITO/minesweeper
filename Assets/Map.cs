@@ -161,6 +161,10 @@ public abstract class Map : MonoBehaviour
     {
         foreach (var cell in cellList)
         {
+            if (cell.text != null)
+            {
+                cell.text.Return();
+            }
             cell.Return();
         }
     }

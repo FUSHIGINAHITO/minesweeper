@@ -117,10 +117,7 @@ public class TriangleMap : TilingMap
             Vector3 applyPos = worldPos;
 
             var cell = PoolManager.instance.triangle.Require();
-            cell.transform.SetParent(transform);
-            cell.transform.SetPositionAndRotation(applyPos, Quaternion.Euler(0f, 0f, rotZ));
-            cell.transform.localScale = cellSize * Vector3.one;
-            cell.Init();
+            cell.Init(applyPos, Quaternion.Euler(0f, 0f, rotZ), cellSize);
 
             triangleToCell[tIdx] = cell;
             cellList.Add(cell);

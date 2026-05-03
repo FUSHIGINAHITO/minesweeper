@@ -24,10 +24,7 @@ public class SquareMap : TilingMap
                 var position = origin + new Vector3(x * cellSize, y * cellSize, 0f);
 
                 var cell = PoolManager.instance.square.Require();
-                cell.transform.SetParent(transform);
-                cell.transform.position = position;
-                cell.transform.localScale = cellSize * Vector3.one;
-                cell.Init();
+                cell.Init(position, Quaternion.identity, cellSize);
 
                 cellList.Add(cell);
             }

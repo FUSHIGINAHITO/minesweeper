@@ -81,10 +81,7 @@ public class HexMap : TilingMap
             Vector3 pos = item.pos + offset;
 
             var cell = PoolManager.instance.hex.Require();
-            cell.transform.SetParent(transform);
-            cell.transform.position = pos;
-            cell.transform.localScale = cellSize * Vector3.one;
-            cell.Init();
+            cell.Init(pos, Quaternion.identity, cellSize);
 
             int i = q + radius;
             int j = r + radius;

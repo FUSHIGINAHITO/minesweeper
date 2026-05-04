@@ -13,11 +13,22 @@ public abstract class Map : MonoBehaviour
     {
         get;
     }
+
+    /// <summary>
+    /// 密铺中使用的形状的种数
+    /// </summary>
+    public abstract int ShapeNum
+    {
+        get;
+    }
+
     [HideInInspector, NonSerialized] public float textSize;
+    [HideInInspector, NonSerialized] public Color[] cellColorList;
 
     [Range(0f, 1f)]
     public float mineRatio = 0.2063f;
     [HideInInspector, NonSerialized] public List<Cell> cellList = new();
+    [HideInInspector, NonSerialized] public List<Cell> borderCellList = new();
     [HideInInspector, NonSerialized] public int totalMineCount;
     [HideInInspector, NonSerialized] public bool minesPlaced = false;
 
@@ -32,7 +43,9 @@ public abstract class Map : MonoBehaviour
         var cam = UIManager.instance.mainCamera;
         var so = Game.instance.so;
 
-        textSize = PoolManager.instance.GetSharedInradiusRatio(BaselineShape) * cellSize * so.textSize;
+        var s = PoolManager.instance.GetSharedInradiusRatio(BaselineShape) * cellSize;
+        textSize = s * so.textSize;
+        cellColorList = so.GenerateHueCycleColors(ShapeNum);
 
         float camDistance = Mathf.Abs(cam.transform.position.z);
 
@@ -60,8 +73,6 @@ public abstract class Map : MonoBehaviour
 
         worldWidth = topRight.x - bottomLeft.x;
         worldHeight = topRight.y - bottomLeft.y;
-
-        cellList.Clear();
 
         GenerateGrid();
         BuildNeighbours();
@@ -165,12 +176,15 @@ public abstract class Map : MonoBehaviour
     {
         foreach (var cell in cellList)
         {
-            if (cell.text != null)
-            {
-                cell.text.Return();
-            }
-
-            cell.Return();
+            cell.ReturnAll();
         }
+
+        foreach (var cell in borderCellList)
+        {
+            cell.ReturnAll();
+        }
+
+        cellList.Clear();
+        borderCellList.Clear();
     }
 }

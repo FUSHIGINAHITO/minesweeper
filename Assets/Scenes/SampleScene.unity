@@ -215,7 +215,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellSize: 0.3
-  mineRatio: 0.2063
+  mineRatio: 0.1
 --- !u!1 &413065064
 GameObject:
   m_ObjectHideFlags: 0
@@ -309,7 +309,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellSize: 0.3
-  mineRatio: 0.2063
+  mineRatio: 0.1
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -446,8 +446,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e21b5a0547cb9644ba6885d9cf648802, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 0.3
-  mineRatio: 0.2063
+  cellSize: 1
+  mineRatio: 0.1
 --- !u!1 &736062784
 GameObject:
   m_ObjectHideFlags: 0
@@ -614,7 +614,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellSize: 0.3
-  mineRatio: 0.15
+  mineRatio: 0.1
 --- !u!1 &939310165
 GameObject:
   m_ObjectHideFlags: 0
@@ -660,7 +660,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellSize: 0.3
-  mineRatio: 0.2063
+  mineRatio: 0.1
 --- !u!1 &1135703349
 GameObject:
   m_ObjectHideFlags: 0
@@ -907,8 +907,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed0c698fea2621f478961fdec63b5c12, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 0.3
-  mineRatio: 0.2063
+  cellSize: 3
+  mineRatio: 0.1
 --- !u!1 &1327380922
 GameObject:
   m_ObjectHideFlags: 0
@@ -953,8 +953,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d4b7ba097e5be5641ae39b701b0ea8a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 0.3
-  mineRatio: 0.2063
+  cellSize: 0.7
+  mineRatio: 0.1
 --- !u!1 &1330567990
 GameObject:
   m_ObjectHideFlags: 0
@@ -1131,8 +1131,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e8df028b5c1c4c4ba69b4d7b5e05cc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 0.3
-  mineRatio: 0.2063
+  cellSize: 2
+  mineRatio: 0.1
 --- !u!1 &1509027475
 GameObject:
   m_ObjectHideFlags: 0
@@ -1181,6 +1181,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   textPool: {fileID: 17410650}
   cellPool: {fileID: 413065066}
+  mainDataSO: {fileID: 11400000, guid: c811e96267f284f47aee9e38dff4d27f, type: 2}
 --- !u!1 &1540734186
 GameObject:
   m_ObjectHideFlags: 0
@@ -1417,8 +1418,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc1641889bd034a4c990980bee70a4b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 0.3
-  mineRatio: 0.2063
+  cellSize: 0.5
+  mineRatio: 0.1
 --- !u!1 &1731141061
 GameObject:
   m_ObjectHideFlags: 0
@@ -1464,7 +1465,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellSize: 0.3
-  mineRatio: 0.2063
+  mineRatio: 0.1
 --- !u!1 &1996488309
 GameObject:
   m_ObjectHideFlags: 0
@@ -1510,7 +1511,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellSize: 0.3
-  mineRatio: 0.22
+  mineRatio: 0.1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -23,10 +23,34 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 4593807b0e74a144dac6ece508b15ca7, type: 3}
   - {fileID: 21300000, guid: 054634eb45b5a8d4cbdf00e546229e95, type: 3}
   - {fileID: 21300000, guid: 8d86a7243bc814546955e383ba28f4f3, type: 3}
-  marginLeftPercent: 0.01
-  marginRightPercent: 0.01
-  marginTopPercent: 0.05
-  marginBottomPercent: 0.01
+  polygonSDFTextures:
+  - {fileID: 2800000, guid: a1c343bef9004f441a547cfcb1f21513, type: 3}
+  - {fileID: 2800000, guid: 2763c47c2253e82449607bddec8c707c, type: 3}
+  - {fileID: 2800000, guid: c033fa2a25625da4e97f93430996219a, type: 3}
+  - {fileID: 2800000, guid: 74f6cb92c37cba3468eeb5bb5e577715, type: 3}
+  - {fileID: 2800000, guid: 6338356e1d9bcb14da7c410c1d4b094f, type: 3}
+  - {fileID: 2800000, guid: 71d9c86f5030406478917c3d252a1338, type: 3}
+  - {fileID: 2800000, guid: f2ffb369e5c5c894fbb2f232f7a6641a, type: 3}
+  - {fileID: 2800000, guid: fed86bf4cdb2a7d4aa9370042dcb06e0, type: 3}
+  - {fileID: 2800000, guid: 60ee0d7ceca942e4a9f7cf691566dc97, type: 3}
+  - {fileID: 2800000, guid: 21a4bd731ec50f74f85d3d939557709d, type: 3}
+  polygonShrinkSprites:
+  - {fileID: 21300000, guid: 4f42e868697eef24990ee52f1e706c49, type: 3}
+  - {fileID: 21300000, guid: 8a486465f30fa8742bad534b4537ab51, type: 3}
+  - {fileID: 21300000, guid: 272637ee2d5573b479e724c395a0cc8f, type: 3}
+  - {fileID: 21300000, guid: 47d18fbd3cb8f254d83aaffa10c00513, type: 3}
+  - {fileID: 21300000, guid: 8fb6c8424736fdb449be707bc6c9f0b7, type: 3}
+  - {fileID: 21300000, guid: 34795ee2d9bccbb4087a63e8eb5a5861, type: 3}
+  - {fileID: 21300000, guid: 4ed713f25669b204686069df223a8d13, type: 3}
+  - {fileID: 21300000, guid: 4593d8e32b5f8c84aa4f464561c6ef9c, type: 3}
+  - {fileID: 21300000, guid: dbcf5b3e6f567ec41abbf701f3bb891b, type: 3}
+  - {fileID: 21300000, guid: 300af1fc422438845aa09f44a5d02c7b, type: 3}
+  polygonBaseMaterial: {fileID: 2100000, guid: abfa4c3d6cab3ff45b0365e3254cdc6e, type: 2}
+  polygonRevealedMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  marginLeftPercent: 0.02
+  marginRightPercent: 0.02
+  marginTopPercent: 0.02
+  marginBottomPercent: 0.02
   colors:
   - {r: 0, g: 0, b: 0, a: 0}
   - {r: 0, g: 0, b: 1, a: 1}
@@ -41,13 +65,14 @@ MonoBehaviour:
   - {r: 0.8962264, g: 0.5476848, b: 0.080322154, a: 1}
   - {r: 0.11160557, g: 0.7169812, b: 0.28736135, a: 1}
   - {r: 0.7411765, g: 0.019607857, b: 0.43064472, a: 1}
-  defaultColor: {r: 0.74509805, g: 0.74509805, b: 0.74509805, a: 0.8}
-  pressedColor: {r: 0.41568628, g: 0.41568628, b: 0.41568628, a: 1}
-  chordColor: {r: 0.41568628, g: 0.41568628, b: 0.41568628, a: 1}
+  borderColor: {r: 0.25157225, g: 0.25157225, b: 0.25157225, a: 1}
+  defaultColor: {r: 0.72327036, g: 0.72327036, b: 0.72327036, a: 1}
+  pressedColor: {r: 0.85490197, g: 0.85490197, b: 0.85490197, a: 0.7490196}
+  chordColor: {r: 0.85490197, g: 0.85490197, b: 0.85490197, a: 0.7490196}
   chordColorFlag: {r: 0.78431374, g: 0.6117647, b: 0.3254902, a: 1}
-  chordColorRevealed: {r: 0.8, g: 0.8, b: 0.8, a: 0.5019608}
+  chordColorRevealed: {r: 0.85490197, g: 0.85490197, b: 0.85490197, a: 0.7490196}
   flagColor: {r: 1, g: 0.78431374, b: 0.42745098, a: 1}
-  revealedColor: {r: 0.8, g: 0.8, b: 0.8, a: 0.5019608}
+  revealedColor: {r: 0.8553459, g: 0.8553459, b: 0.8553459, a: 0.7490196}
   mineColor: {r: 1, g: 0.8117647, b: 0.79607844, a: 1}
   bombMineColor: {r: 1, g: 0.44705883, b: 0.44705883, a: 1}
   wrongFlagColor: {r: 0.7882353, g: 0.52156866, b: 0.9607843, a: 1}
@@ -55,7 +80,11 @@ MonoBehaviour:
   holdSprite: {fileID: 21300000, guid: 46c4f72a64233a94bbd87c8d8cf75093, type: 3}
   victorySprite: {fileID: 21300000, guid: a14e0eefab8d3ef46894867014194d0d, type: 3}
   defeatSprite: {fileID: 21300000, guid: 8ca6b90ae01ffd34695964b547a8d40b, type: 3}
-  normalBgColor: {r: 0.9137255, g: 0.9137255, b: 0.9137255, a: 1}
+  normalBgColor: {r: 0.78616345, g: 0.78616345, b: 0.78616345, a: 1}
   victoryColor: {r: 0.93333334, g: 1, b: 0.9019608, a: 1}
   defeatColor: {r: 1, g: 0.9098039, b: 0.92941177, a: 1}
   textSize: 0.59
+  bevelSize: 0.15
+  hueSaturation: 0.2
+  hueValue: 1
+  hueAlpha: 1

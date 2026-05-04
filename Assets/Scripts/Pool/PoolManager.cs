@@ -9,20 +9,38 @@ public class PoolManager : MonoBehaviour
     public TextPool textPool;
     public CellPool cellPool;
 
+    [SerializeField] private MainDataSO mainDataSO;
+
     private readonly List<Vector2[]> sharedLocalVertices = new();
     private readonly List<float> sharedInradiusRatios = new();
+    private readonly List<Material> sharedPolygonMaterials = new();
+
+    private const int ShapeCount = 10; // 3~12 边形
+    private static readonly int SdfTexId = Shader.PropertyToID("_SDFTex");
+    private static readonly int BevelWidthId = Shader.PropertyToID("_BevelWidth");
 
     private void Awake()
     {
         _instance = this;
         BuildSharedLocalVertices();
         BuildSharedInradiusRatios();
+        BuildSharedPolygonMaterials();
     }
 
-    public Cell RequireCell(CellShapeType cellShapeType, Vector3 pos, Quaternion rot, float scale)
+    private void OnDestroy()
+    {
+        for (int i = 0; i < sharedPolygonMaterials.Count; i++)
+        {
+            Destroy(sharedPolygonMaterials[i]);
+        }
+
+        sharedPolygonMaterials.Clear();
+    }
+
+    public Cell RequireCell(CellShapeType cellShapeType, Vector3 pos, Quaternion rot, float scale, bool isBorder = false, int typeId = -1)
     {
         var cell = cellPool.Require();
-        cell.Init(cellShapeType, pos, rot, scale);
+        cell.Init(cellShapeType, pos, rot, scale, isBorder, typeId);
         return cell;
     }
 
@@ -34,6 +52,11 @@ public class PoolManager : MonoBehaviour
     public float GetSharedInradiusRatio(CellShapeType shapeType)
     {
         return sharedInradiusRatios[(int)shapeType];
+    }
+
+    public Material GetSharedPolygonMaterial(CellShapeType shapeType)
+    {
+        return sharedPolygonMaterials[(int)shapeType];
     }
 
     private void BuildSharedLocalVertices()
@@ -50,7 +73,6 @@ public class PoolManager : MonoBehaviour
     {
         sharedInradiusRatios.Clear();
 
-        // 以正三角形为基准，ratio(3) = 1
         float baseInradius = BuildRegularPolygonInradius(3, 1f);
 
         for (int n = 3; n <= 12; n++)
@@ -60,20 +82,29 @@ public class PoolManager : MonoBehaviour
         }
     }
 
+    private void BuildSharedPolygonMaterials()
+    {
+        sharedPolygonMaterials.Clear();
+
+        for (int i = 0; i < ShapeCount; i++)
+        {
+            Material mat = new Material(mainDataSO.polygonBaseMaterial)
+            {
+                name = $"{mainDataSO.polygonBaseMaterial.name}_Shape_{i + 3}"
+            };
+
+            mat.SetTexture(SdfTexId, mainDataSO.polygonSDFTextures[i]);
+            mat.SetFloat(BevelWidthId, mainDataSO.bevelSize / sharedInradiusRatios[i]);
+            sharedPolygonMaterials.Add(mat);
+        }
+    }
+
     private static Vector2[] BuildRegularPolygonVertices(int n, float size)
     {
-        if (n < 3)
-        {
-            return System.Array.Empty<Vector2>();
-        }
-
         var vertices = new Vector2[n];
         float step = Mathf.PI * 2f / n;
 
-        // 边长 s -> 外接圆半径 R
         float radius = size / (2f * Mathf.Sin(Mathf.PI / n));
-
-        // 保证“正下方是边”：-90° 对应某条边的中点方向
         float startAngle = -Mathf.PI * 0.5f - step * 0.5f;
 
         for (int i = 0; i < n; i++)
@@ -87,12 +118,6 @@ public class PoolManager : MonoBehaviour
 
     private static float BuildRegularPolygonInradius(int n, float size)
     {
-        if (n < 3)
-        {
-            return 0f;
-        }
-
-        // 边长 s -> 内接圆半径 r = s / (2 * tan(pi / n))
         return size / (2f * Mathf.Tan(Mathf.PI / n));
     }
 }

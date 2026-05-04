@@ -27,8 +27,8 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
 
     private void Awake()
     {
-        Preload(initialSize);
         trans = transform;
+        Preload(initialSize);
     }
 
     /// <summary>

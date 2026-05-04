@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class Cell : CellPool.PoolObj
 {
     [NonSerialized, HideInInspector] public int value;
     [NonSerialized, HideInInspector] public List<Cell> neighbours = new();
+    [NonSerialized, HideInInspector] public bool isBorder;
     [NonSerialized, HideInInspector] public bool isRevealed;
     [NonSerialized, HideInInspector] public bool isMine;
     [NonSerialized, HideInInspector] public bool isFlagged;
@@ -21,6 +21,7 @@ public class Cell : CellPool.PoolObj
 
     // BuildNeighbours 临时使用，避免字典查索引
     [NonSerialized, HideInInspector] public int tempBuildIndex = -1;
+    [NonSerialized, HideInInspector] public int typeId = -1;
     private Transform trans;
 
     [NonSerialized, HideInInspector] public Vector3 position;
@@ -32,17 +33,20 @@ public class Cell : CellPool.PoolObj
         trans = transform;
     }
 
-    public void Init(CellShapeType cellShapeType, Vector3 pos, Quaternion rot, float s)
+    public void Init(CellShapeType cellShapeType, Vector3 pos, Quaternion rot, float s, bool _isBorder, int _typeId = -1)
     {
+        var so = Game.instance.so;
         shapeType = cellShapeType;
+        typeId = _typeId;
         value = 0;
         neighbours.Clear();
         isRevealed = false;
         isMine = false;
         isFlagged = false;
+        isBorder = _isBorder;
 
-        image.sprite = Game.instance.so.polygonSprites[(int)shapeType];
-        image.color = Game.instance.so.defaultColor;
+        ShowRevealArt(false);
+        image.color = isBorder ? so.borderColor : so.defaultColor;
 
         geometryDirty = true;
         tempBuildIndex = -1;
@@ -76,6 +80,8 @@ public class Cell : CellPool.PoolObj
             isRevealed = true;
             image.color = isMine ? so.mineColor : so.revealedColor;
 
+            ShowRevealArt(true);
+
             if (!isMine && value > 0)
             {
                 text = PoolManager.instance.textPool.Require();
@@ -105,16 +111,19 @@ public class Cell : CellPool.PoolObj
     {
         isFlagged = true;
         image.color = Game.instance.so.flagColor;
+        Restore();
     }
 
     public void Unflag()
     {
         isFlagged = false;
         image.color = Game.instance.so.defaultColor;
+        Restore();
     }
 
     public void Pressed()
     {
+        ShowRevealArt(true);
         image.color = Game.instance.so.pressedColor;
     }
 
@@ -123,10 +132,12 @@ public class Cell : CellPool.PoolObj
         var so = Game.instance.so;
         if (!isRevealed)
         {
+            ShowRevealArt(false);
             image.color = isFlagged ? so.flagColor : so.defaultColor;
         }
         else
         {
+            ShowRevealArt(true);
             image.color = so.revealedColor;
         }
     }
@@ -134,6 +145,7 @@ public class Cell : CellPool.PoolObj
     public void Chord()
     {
         var so = Game.instance.so;
+        ShowRevealArt(true);
         if (!isRevealed)
         {
             image.color = isFlagged ? so.chordColorFlag : so.chordColor;
@@ -141,6 +153,32 @@ public class Cell : CellPool.PoolObj
         else
         {
             image.color = so.chordColorRevealed;
+        }
+    }
+
+    public void ReturnAll()
+    {
+        if (text is not null)
+        {
+            text.Return();
+            text = null;
+        }
+
+        Return();
+    }
+
+    private void ShowRevealArt(bool v)
+    {
+        var so = Game.instance.so;
+        if (v)
+        {
+            image.sharedMaterial = so.polygonRevealedMaterial;
+            image.sprite = so.polygonShrinkSprites[(int)shapeType];
+        }
+        else
+        {
+            image.sharedMaterial = PoolManager.instance.GetSharedPolygonMaterial(shapeType);
+            image.sprite = so.polygonSprites[(int)shapeType];
         }
     }
 }

@@ -53,13 +53,11 @@ public class UIManager : MonoBehaviour
     public void Victory()
     {
         faceImage.sprite = Game.instance.so.victorySprite;
-        mainCamera.backgroundColor = Game.instance.so.victoryColor;
     }
 
     public void Defeat()
     {
         faceImage.sprite = Game.instance.so.defeatSprite;
-        mainCamera.backgroundColor = Game.instance.so.defeatColor;
     }
 
     public void GameStart()

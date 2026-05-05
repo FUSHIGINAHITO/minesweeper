@@ -222,6 +222,7 @@ public abstract class PeriodicMotifMap : TilingMap
                     typeId);
 
                 cellList.Add(cell);
+                allCellList.Add(cell);
                 placedKeys.Add(key);
                 return;
             }
@@ -239,7 +240,7 @@ public abstract class PeriodicMotifMap : TilingMap
                 true,
                 typeId);
 
-            borderCellList.Add(borderCell);
+            allCellList.Add(borderCell);
             placedKeys.Add(key);
         }
 

@@ -158,12 +158,7 @@ public class Cell : CellPool.PoolObj
 
     public void ReturnAll()
     {
-        if (text is not null)
-        {
-            text.Return();
-            text = null;
-        }
-
+        ReturnText();
         Return();
     }
 
@@ -179,6 +174,23 @@ public class Cell : CellPool.PoolObj
         {
             image.sharedMaterial = PoolManager.instance.GetSharedPolygonMaterial(shapeType);
             image.sprite = so.polygonSprites[(int)shapeType];
+        }
+    }
+
+    public void ShowColor()
+    {
+        ShowRevealArt(false);
+        image.color = Game.instance.map.cellColorList[typeId];
+
+        ReturnText();
+    }
+
+    private void ReturnText()
+    {
+        if (text is not null)
+        {
+            text.Return();
+            text = null;
         }
     }
 }

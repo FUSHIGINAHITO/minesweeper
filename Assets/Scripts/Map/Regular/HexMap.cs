@@ -1,5 +1,8 @@
 using UnityEngine;
 
+/// <summary>
+/// ∞ÿ¿≠Õº√‹∆Ã 6.6.6
+/// </summary>
 public class HexMap : PeriodicMotifMap
 {
     public override CellShapeType BaselineShape => CellShapeType.Hex;

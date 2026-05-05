@@ -28,7 +28,7 @@ public abstract class Map : MonoBehaviour
     [Range(0f, 1f)]
     public float mineRatio = 0.2063f;
     [HideInInspector, NonSerialized] public List<Cell> cellList = new();
-    [HideInInspector, NonSerialized] public List<Cell> borderCellList = new();
+    [HideInInspector, NonSerialized] public List<Cell> allCellList = new();
     [HideInInspector, NonSerialized] public int totalMineCount;
     [HideInInspector, NonSerialized] public bool minesPlaced = false;
 
@@ -45,7 +45,7 @@ public abstract class Map : MonoBehaviour
 
         var s = PoolManager.instance.GetSharedInradiusRatio(BaselineShape) * cellSize;
         textSize = s * so.textSize;
-        cellColorList = so.GenerateHueCycleColors(ShapeNum);
+        cellColorList = so.GeneratePerceptualHueCycleColors(ShapeNum);
 
         float camDistance = Mathf.Abs(cam.transform.position.z);
 
@@ -75,6 +75,9 @@ public abstract class Map : MonoBehaviour
         worldHeight = topRight.y - bottomLeft.y;
 
         GenerateGrid();
+#if UNITY_EDITOR
+        ValidateNoCellOverlapInEditor();
+#endif
         BuildNeighbours();
 
         totalMineCount = Mathf.Min(Mathf.RoundToInt(cellList.Count * mineRatio), cellList.Count - 1);
@@ -84,6 +87,7 @@ public abstract class Map : MonoBehaviour
     }
 
     protected abstract void GenerateGrid();
+    protected abstract void ValidateNoCellOverlapInEditor();
     protected abstract void BuildNeighbours();
 
     // 新增：无碰撞体拾取
@@ -174,17 +178,20 @@ public abstract class Map : MonoBehaviour
 
     public void Return()
     {
-        foreach (var cell in cellList)
-        {
-            cell.ReturnAll();
-        }
-
-        foreach (var cell in borderCellList)
+        foreach (var cell in allCellList)
         {
             cell.ReturnAll();
         }
 
         cellList.Clear();
-        borderCellList.Clear();
+        allCellList.Clear();
+    }
+
+    public void ShowVictoryAnim()
+    {
+        foreach (var cell in allCellList)
+        {
+            cell.ShowColor();
+        }
     }
 }

@@ -345,6 +345,7 @@ public class Game : MonoBehaviour
         GameOver();
 
         map.FlagRestMines();
+        map.ShowVictoryAnim();
         restMineCount = 0;
 
         UIManager.instance.Victory();

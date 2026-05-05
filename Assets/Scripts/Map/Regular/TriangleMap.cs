@@ -1,5 +1,8 @@
 using UnityEngine;
 
+/// <summary>
+/// ∞ÿ¿≠Õº√‹∆Ã 3.3.3.3.3.3
+/// </summary>
 public class TriangleMap : PeriodicMotifMap
 {
     public override CellShapeType BaselineShape => CellShapeType.Triangle;

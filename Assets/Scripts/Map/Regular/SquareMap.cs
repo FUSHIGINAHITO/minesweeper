@@ -1,5 +1,8 @@
 using UnityEngine;
 
+/// <summary>
+/// ∞ÿ¿≠Õº√‹∆Ã 4.4.4.4
+/// </summary>
 public class SquareMap : PeriodicMotifMap
 {
     public override CellShapeType BaselineShape => CellShapeType.Square;

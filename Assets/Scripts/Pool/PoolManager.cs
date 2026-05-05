@@ -28,6 +28,8 @@ public class PoolManager : MonoBehaviour
         BuildSharedInradiusRatios();
         BuildSharedAreaRatios();
         BuildSharedPolygonMaterials();
+
+        Cell.so = mainDataSO;
     }
 
     private void OnDestroy()
@@ -77,6 +79,11 @@ public class PoolManager : MonoBehaviour
     public Material GetSharedPolygonBorderMaterial(CellShapeType shapeType)
     {
         return sharedPolygonBorderMaterials[(int)shapeType];
+    }
+
+    public Sprite GetSharedPolygonSprite(CellShapeType shapeType)
+    {
+        return mainDataSO.polygonSprites[(int)shapeType];
     }
 
     private void BuildSharedLocalVertices()

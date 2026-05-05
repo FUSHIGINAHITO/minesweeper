@@ -19,7 +19,7 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
     [SerializeField] private int totalCount;
 
     [Header("Pool Settings")]
-    [SerializeField] private GameObject prefab;
+    [SerializeField] private T prefab;
     [SerializeField] private int initialSize = 100;
 
     private readonly Queue<T> pool = new();
@@ -68,8 +68,7 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
 
     private T CreateInstance()
     {
-        var go = Instantiate(prefab, trans);
-        var item = go.GetComponent<T>();
+        var item = Instantiate(prefab, trans);
         item.pool = this;
         OnReturn(item);
 

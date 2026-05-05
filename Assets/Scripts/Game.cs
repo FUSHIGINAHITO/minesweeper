@@ -49,7 +49,6 @@ public class Game : MonoBehaviour
         _instance = this;
 
         maps = GetComponentsInChildren<Map>();
-        Cell.so = so;
     }
 
     // 初始化地图与 UI

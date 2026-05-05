@@ -174,14 +174,14 @@ public class Cell : CellPool.PoolObj
                 image.sharedMaterial = PoolManager.instance.GetSharedPolygonMaterial(shapeType);
             }
             
-            image.sprite = so.polygonSprites[(int)shapeType];
+            image.sprite = PoolManager.instance.GetSharedPolygonSprite(shapeType);
         }
     }
 
     public void ShowColor()
     {
         image.sharedMaterial = PoolManager.instance.GetSharedPolygonMaterial(shapeType);
-        image.sprite = so.polygonSprites[(int)shapeType];
+        image.sprite = PoolManager.instance.GetSharedPolygonSprite(shapeType);
         image.color = Game.instance.map.cellColorList[typeId];
 
         ReturnText();

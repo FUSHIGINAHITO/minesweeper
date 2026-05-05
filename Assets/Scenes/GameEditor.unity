@@ -1349,21 +1349,34 @@ MonoBehaviour:
   tileButtonRoot: {fileID: 653290257}
   placementZ: 0
   cellScale: 1
+  positionQuantizeScale: 100000
+  rotationQuantizeScale: 10000
   edgeSnapTolerance: 0.1
   edgeQuantizeScale: 10000
   maxSnapRotateDeg: 90
+  nearestNormalTieDeg: 3
   snapNormalGapTolerance: 0.3
   snapTangentialGapTolerance: 0.3
+  overlapAreaBlockThreshold: 0.0001
+  logOverlapArea: 0
+  debugOverlapArea: 0
   previewAlpha: 0.45
   previewValidColor: {r: 0.06189978, g: 1, b: 0, a: 1}
   previewInvalidColor: {r: 1, g: 0, b: 0, a: 1}
   placedOrderStart: 0
+  exportMotifId: NewMotif
+  exportAssetFolder: Assets/SO/PeriodicMotifs
+  detectMinTranslationLength: 0.2
+  detectScoreThreshold: 0.98
   drawSnapGizmos: 1
   handSnapEdgeGizmoColor: {r: 0, g: 1, b: 1, a: 1}
   handOtherEdgesGizmoColor: {r: 0, g: 1, b: 1, a: 0.35}
   boundarySnapEdgeGizmoColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  boundaryOtherEdgesGizmoColor: {r: 1, g: 0.92, b: 0.016, a: 0.35}
   handNormalGizmoColor: {r: 1, g: 0, b: 1, a: 1}
   boundaryNormalGizmoColor: {r: 1, g: 0.5, b: 0, a: 1}
+  overlapHandPolygonColor: {r: 1, g: 0, b: 0, a: 1}
+  overlapPlacedPolygonColor: {r: 1, g: 0.4, b: 0, a: 1}
   normalGizmoLength: 0.35
   snapEdgePointGizmoRadius: 0.03
 --- !u!114 &2100606057

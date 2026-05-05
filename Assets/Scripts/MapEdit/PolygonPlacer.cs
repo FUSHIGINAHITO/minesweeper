@@ -1,5 +1,11 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.EventSystems;
+
+#if UNITY_EDITOR
+using System.IO;
+using UnityEditor;
+#endif
 
 public partial class PolygonPlacer : MonoBehaviour
 {
@@ -45,8 +51,15 @@ public partial class PolygonPlacer : MonoBehaviour
     [Header("Render Order")]
     [SerializeField] private int placedOrderStart = 0;
 
+    [Header("Periodic Motif Export")]
+    [SerializeField] private string exportMotifId = "NewMotif";
+    [SerializeField] private string exportAssetFolder = "Assets/SO/PeriodicMotifs";
+    [SerializeField, Min(0.0001f)] private float detectMinTranslationLength = 0.2f;
+    [SerializeField, Range(0.5f, 1f)] private float detectScoreThreshold = 0.98f;
+
     private readonly PolygonBoundaryTracker boundaryTracker = new();
     private readonly PolygonSnapSolver snapSolver = new();
+    private readonly PeriodicMotifDetector motifDetector = new();
 
     private int currentTileIndex = -1;
     private float heldRotationDeg;
@@ -63,7 +76,7 @@ public partial class PolygonPlacer : MonoBehaviour
     private Vector2 currentMouseWorld2D;
     private int nextPlacedOrder;
 
-    // overlap gizmo
+    // overlap gizmo data
     private bool gizmoHasOverlap;
     private Vector2[] gizmoOverlapHandPolygon;
     private Vector2[] gizmoOverlapPlacedPolygon;
@@ -76,6 +89,16 @@ public partial class PolygonPlacer : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Backspace))
+        {
+            ClearPlacedTiles();
+        }
+
+        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+        {
+            TryDetectAndExportPeriodicMotif();
+        }
+
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             CancelHolding();
@@ -281,7 +304,7 @@ public partial class PolygonPlacer : MonoBehaviour
                 out Vector2 pos,
                 out float rotDeg))
         {
-            heldRotationDeg = rotDeg;
+            // 保持 heldRotationDeg 不变，确保“手上用于吸附判定”的多边形朝向恒定
             snappedRotationDeg = rotDeg;
             snappedPos = new Vector3(pos.x, pos.y, placementZ);
 
@@ -359,6 +382,163 @@ public partial class PolygonPlacer : MonoBehaviour
         ClearOverlapGizmoState();
         previewCanPlace = true;
     }
+
+    private void TryDetectAndExportPeriodicMotif()
+    {
+        if (boundaryTracker.PlacedTileCount < 1)
+        {
+            Debug.LogWarning("[PolygonPlacer] 场上没有单元，无法判定密铺。");
+            return;
+        }
+
+        List<PlacedTileData> snapshot = boundaryTracker.GetPlacedTilesSnapshot();
+
+        if (!motifDetector.TryDetect(
+                snapshot,
+                mainDataSO,
+                cellScale,
+                positionQuantizeScale,
+                rotationQuantizeScale,
+                detectMinTranslationLength,
+                detectScoreThreshold,
+                out PeriodicMotifDetector.DetectionResult detectResult,
+                out string reason))
+        {
+            Debug.LogWarning($"[PolygonPlacer] 密铺判定失败：{reason}");
+            return;
+        }
+
+#if UNITY_EDITOR
+        if (!TryCreatePeriodicMotifAsset(detectResult, out string assetPath, out string error))
+        {
+            Debug.LogError($"[PolygonPlacer] 导出失败：{error}");
+            return;
+        }
+
+        Debug.Log($"[PolygonPlacer] 导出成功：{assetPath}");
+#else
+        Debug.LogWarning("[PolygonPlacer] 当前不在 UnityEditor，无法导出 Asset。");
+#endif
+    }
+
+    private void ClearPlacedTiles()
+    {
+        view.ClearPlaced();
+        boundaryTracker.Clear();
+
+        nextPlacedOrder = placedOrderStart;
+        selectedSnapEdgeIndex = -1;
+        hasActiveBoundaryEdge = false;
+        hasSnapSolution = false;
+        previewCanPlace = false;
+        isSnapLatched = false;
+        ClearOverlapGizmoState();
+
+        if (currentTileIndex >= 0 && view.HasPreview)
+        {
+            view.SetPreviewVisual(true, previewAlpha, previewValidColor, previewInvalidColor);
+        }
+    }
+
+#if UNITY_EDITOR
+    private bool TryCreatePeriodicMotifAsset(
+        PeriodicMotifDetector.DetectionResult detectResult,
+        out string assetPath,
+        out string error)
+    {
+        assetPath = string.Empty;
+        error = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(exportAssetFolder) || !exportAssetFolder.StartsWith("Assets"))
+        {
+            error = "exportAssetFolder 必须是 Assets 下路径。";
+            return false;
+        }
+
+        EnsureFolder(exportAssetFolder);
+
+        string motifId = string.IsNullOrWhiteSpace(exportMotifId)
+            ? $"Motif_{System.DateTime.Now:yyyyMMdd_HHmmss}"
+            : exportMotifId.Trim();
+
+        var so = ScriptableObject.CreateInstance<PeriodicMotifSO>();
+        so.motifId = motifId;
+        so.baselineShape = detectResult.baselineShape;
+        so.shapeNum = Mathf.Max(1, detectResult.shapeNum);
+        so.positionQuantizeScale = Mathf.Max(1f, positionQuantizeScale);
+        so.rotationQuantizeScale = Mathf.Max(1f, rotationQuantizeScale);
+
+        Vector2 b1Unit = detectResult.basis1 / cellScale;
+        Vector2 b2Unit = detectResult.basis2 / cellScale;
+        so.basis1Unit = so.QuantizePosition(b1Unit);
+        so.basis2Unit = so.QuantizePosition(b2Unit);
+
+        var cells = new MotifCellData[detectResult.motifCells.Count];
+        for (int i = 0; i < detectResult.motifCells.Count; i++)
+        {
+            PeriodicMotifDetector.DetectedCell c = detectResult.motifCells[i];
+            cells[i] = new MotifCellData
+            {
+                shapeType = c.shapeType,
+                localCenterUnit = so.QuantizePosition(c.localCenter / cellScale),
+                localRotationDeg = so.QuantizeRotation(c.localRotationDeg),
+                typeId = c.typeId
+            };
+        }
+
+        so.cells = cells;
+
+        string safeName = SanitizeFileName(motifId);
+        string rawPath = $"{exportAssetFolder}/{safeName}.asset";
+        string uniquePath = AssetDatabase.GenerateUniqueAssetPath(rawPath);
+
+        AssetDatabase.CreateAsset(so, uniquePath);
+        EditorUtility.SetDirty(so);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        Selection.activeObject = so;
+        assetPath = uniquePath;
+        return true;
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        char[] invalid = Path.GetInvalidFileNameChars();
+        for (int i = 0; i < invalid.Length; i++)
+        {
+            name = name.Replace(invalid[i], '_');
+        }
+
+        return name;
+    }
+
+    private static void EnsureFolder(string folderPath)
+    {
+        if (AssetDatabase.IsValidFolder(folderPath))
+        {
+            return;
+        }
+
+        string[] parts = folderPath.Split('/');
+        if (parts.Length == 0 || parts[0] != "Assets")
+        {
+            return;
+        }
+
+        string current = "Assets";
+        for (int i = 1; i < parts.Length; i++)
+        {
+            string next = $"{current}/{parts[i]}";
+            if (!AssetDatabase.IsValidFolder(next))
+            {
+                AssetDatabase.CreateFolder(current, parts[i]);
+            }
+
+            current = next;
+        }
+    }
+#endif
 
     private static float QuantizeFloat(float v, float scale)
     {

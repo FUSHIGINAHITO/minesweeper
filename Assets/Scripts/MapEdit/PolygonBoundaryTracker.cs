@@ -73,7 +73,6 @@ public sealed class PolygonBoundaryTracker
     private readonly List<BoundaryEdge> boundaryEdges = new();
     private bool boundaryDirty = true;
 
-    // internal quantization for stored motif data
     private const float PositionStoreQuantizeScale = 100000f;
     private const float RotationStoreQuantizeScale = 10000f;
 
@@ -92,6 +91,18 @@ public sealed class PolygonBoundaryTracker
             rotationDeg = rotationDeg
         });
 
+        boundaryDirty = true;
+    }
+
+    public List<PlacedTileData> GetPlacedTilesSnapshot()
+    {
+        return new List<PlacedTileData>(placedTiles);
+    }
+
+    public void Clear()
+    {
+        placedTiles.Clear();
+        boundaryEdges.Clear();
         boundaryDirty = true;
     }
 
@@ -187,15 +198,10 @@ public sealed class PolygonBoundaryTracker
         }
 
         int nxBase = Mathf.Max(8, samplesPerAxis);
-        float aspect = h / w;
-        aspect = Mathf.Clamp(aspect, 0.25f, 4f);
+        float aspect = Mathf.Clamp(h / w, 0.25f, 4f);
 
-        int nx = nxBase;
-        int ny = Mathf.RoundToInt(nxBase * aspect);
-
-        const int maxAxis = 128;
-        nx = Mathf.Clamp(nx, 8, maxAxis);
-        ny = Mathf.Clamp(ny, 8, maxAxis);
+        int nx = Mathf.Clamp(nxBase, 8, 128);
+        int ny = Mathf.Clamp(Mathf.RoundToInt(nxBase * aspect), 8, 128);
 
         float dx = w / nx;
         float dy = h / ny;

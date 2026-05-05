@@ -2,12 +2,18 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public abstract class TilingMap : Map
+public abstract partial class TilingMap : Map
 {
     protected virtual float VertexQuantizeScale => Mathf.Max(1f, 1f / cellSize) * 1000f;
 
     // 拾取桶大小：默认用 cellSize，可按地图类型覆写
     protected virtual float PickBucketSize => Mathf.Max(1e-4f, cellSize);
+
+    // 是否启用低度点剥离（2-core）
+    protected virtual bool EnableLowDegreePrune => true;
+
+    // 可玩图最小度数；2 表示去掉度 <= 1 的点
+    protected virtual int MinPlayableDegree => 2;
 
     protected struct VertexKey : IEquatable<VertexKey>
     {
@@ -59,13 +65,6 @@ public abstract class TilingMap : Map
     // 邻接去重：比 HashSet<ulong> 更轻量
     private int[] neighbourSeenStamp = Array.Empty<int>();
     private int currentSeenStamp;
-
-    protected VertexKey Quantize(Vector2 v)
-    {
-        long qx = (long)Mathf.Round(v.x * VertexQuantizeScale);
-        long qy = (long)Mathf.Round(v.y * VertexQuantizeScale);
-        return new VertexKey(qx, qy);
-    }
 
     private List<Cell> RentList(int capacity)
     {
@@ -239,6 +238,11 @@ public abstract class TilingMap : Map
                 for (int i = 0; i < candidates.Count; i++)
                 {
                     var c = candidates[i];
+                    if (c.isBorder)
+                    {
+                        continue;
+                    }
+
                     var verts = GetCellVertices(c);
 
                     var b = c.cachedAabb;
@@ -262,8 +266,24 @@ public abstract class TilingMap : Map
 
     protected override void BuildNeighbours()
     {
+        // 1) 只构一次完整邻接
+        BuildAdjacencyOnly();
+
+        // 2) 在当前邻接上做 2-core 剥离
+        if (EnableLowDegreePrune && MinPlayableDegree > 0
+            && PruneLowDegreeCellsToBorder(MinPlayableDegree, out bool[] removed))
+        {
+            // 3) 不重构邻接，直接原地清理并压缩 cellList
+            CompactCellListAndCleanupNeighbours(removed);
+        }
+
+        // 4) 最后基于最终 cellList 构建拾取桶
+        RebuildPickBuckets();
+    }
+
+    private void BuildAdjacencyOnly()
+    {
         ClearAndRecycle(vertexMap);
-        ClearAndRecycle(pickBuckets);
 
         int cellCount = cellList.Count;
         if (cellCount == 0)
@@ -276,8 +296,6 @@ public abstract class TilingMap : Map
             neighbourSeenStamp = new int[cellCount];
         }
 
-        float bucketSize = PickBucketSize;
-        float invBucketSize = 1f / bucketSize;
         float quantizeScale = VertexQuantizeScale;
 
         for (int ci = 0; ci < cellCount; ci++)
@@ -342,10 +360,174 @@ public abstract class TilingMap : Map
 
                 list.Add(c);
             }
+        }
 
-            // 建拾取桶（按 AABB 覆盖到多个桶）
-            // 使用乘 invBucketSize 替代除法，减少热点内浮点除法成本
+        ClearAndRecycle(vertexMap);
+    }
+
+    private bool PruneLowDegreeCellsToBorder(int minDegree, out bool[] removed)
+    {
+        int cellCount = cellList.Count;
+        if (cellCount == 0)
+        {
+            removed = Array.Empty<bool>();
+            return false;
+        }
+
+        var degree = new int[cellCount];
+        removed = new bool[cellCount];
+        var queue = new Queue<int>(cellCount);
+
+        for (int i = 0; i < cellCount; i++)
+        {
+            var c = cellList[i];
+            c.tempBuildIndex = i;
+            degree[i] = c.neighbours.Count;
+
+            if (degree[i] < minDegree)
+            {
+                queue.Enqueue(i);
+            }
+        }
+
+        int removedCount = 0;
+
+        while (queue.Count > 0)
+        {
+            int idx = queue.Dequeue();
+            if (removed[idx])
+            {
+                continue;
+            }
+
+            removed[idx] = true;
+            removedCount++;
+
+            var c = cellList[idx];
+            var neighbours = c.neighbours;
+
+            for (int i = 0; i < neighbours.Count; i++)
+            {
+                var n = neighbours[i];
+                int ni = n.tempBuildIndex;
+                if (ni < 0 || ni >= cellCount || removed[ni])
+                {
+                    continue;
+                }
+
+                degree[ni]--;
+                if (degree[ni] < minDegree)
+                {
+                    queue.Enqueue(ni);
+                }
+            }
+        }
+
+        if (removedCount == 0)
+        {
+            return false;
+        }
+
+        Color borderColor = Game.instance.so.borderColor;
+
+        for (int i = 0; i < cellCount; i++)
+        {
+            if (!removed[i])
+            {
+                continue;
+            }
+
+            var c = cellList[i];
+            c.isBorder = true;
+            c.isMine = false;
+            c.value = 0;
+            c.isFlagged = false;
+            c.image.color = borderColor;
+            c.neighbours.Clear();
+            c.tempBuildIndex = -1;
+        }
+
+        return true;
+    }
+
+    private void CompactCellListAndCleanupNeighbours(bool[] removed)
+    {
+        int oldCount = removed.Length;
+        if (oldCount == 0)
+        {
+            return;
+        }
+
+        // 原地压缩 cellList（移除被剥离点）
+        int write = 0;
+        for (int read = 0; read < oldCount; read++)
+        {
+            if (removed[read])
+            {
+                continue;
+            }
+
+            cellList[write] = cellList[read];
+            write++;
+        }
+
+        if (write < cellList.Count)
+        {
+            cellList.RemoveRange(write, cellList.Count - write);
+        }
+
+        // 原地清理保留节点的邻接：去掉已剥离点引用
+        int keptCount = cellList.Count;
+        for (int i = 0; i < keptCount; i++)
+        {
+            var c = cellList[i];
+            var neighbours = c.neighbours;
+
+            int nWrite = 0;
+            for (int nRead = 0; nRead < neighbours.Count; nRead++)
+            {
+                var n = neighbours[nRead];
+                int ni = n.tempBuildIndex;
+                if (ni < 0 || ni >= oldCount || removed[ni])
+                {
+                    continue;
+                }
+
+                neighbours[nWrite] = n;
+                nWrite++;
+            }
+
+            if (nWrite < neighbours.Count)
+            {
+                neighbours.RemoveRange(nWrite, neighbours.Count - nWrite);
+            }
+        }
+
+        // 重新写入保留节点索引
+        for (int i = 0; i < keptCount; i++)
+        {
+            cellList[i].tempBuildIndex = i;
+        }
+    }
+
+    private void RebuildPickBuckets()
+    {
+        ClearAndRecycle(pickBuckets);
+
+        int cellCount = cellList.Count;
+        if (cellCount == 0)
+        {
+            return;
+        }
+
+        float bucketSize = PickBucketSize;
+        float invBucketSize = 1f / bucketSize;
+
+        for (int i = 0; i < cellCount; i++)
+        {
+            var c = cellList[i];
             var aabb = c.cachedAabb;
+
             int minX = Mathf.FloorToInt(aabb.min.x * invBucketSize);
             int maxX = Mathf.FloorToInt(aabb.max.x * invBucketSize);
             int minY = Mathf.FloorToInt(aabb.min.y * invBucketSize);
@@ -366,8 +548,6 @@ public abstract class TilingMap : Map
                 }
             }
         }
-
-        ClearAndRecycle(vertexMap);
     }
 
     private static bool IsPointInPolygon(Vector2 p, Vector2[] polygon)
@@ -391,186 +571,4 @@ public abstract class TilingMap : Map
 
         return inside;
     }
-
-    #region CheckOverlap
-    protected virtual float OverlapLinearTolerance => Mathf.Max(1e-5f, cellSize * 1e-3f);
-    protected virtual float OverlapAabbTolerance => OverlapLinearTolerance;
-
-    protected override void ValidateNoCellOverlapInEditor()
-    {
-#if UNITY_EDITOR
-        int cellCount = cellList.Count;
-        if (cellCount <= 1)
-        {
-            return;
-        }
-
-        ClearAndRecycle(pickBuckets);
-
-        float bucketSize = PickBucketSize;
-        float invBucketSize = 1f / bucketSize;
-        float aabbTolerance = OverlapAabbTolerance;
-        float overlapTolerance = OverlapLinearTolerance;
-
-        var checkedPairs = new HashSet<ulong>();
-        int overlapCount = 0;
-        const int maxDetailedReport = 20;
-
-        for (int i = 0; i < cellCount; i++)
-        {
-            var c = cellList[i];
-            c.tempBuildIndex = i;
-            GetCellVertices(c);
-
-            var aabb = c.cachedAabb;
-            int minX = Mathf.FloorToInt(aabb.min.x * invBucketSize);
-            int maxX = Mathf.FloorToInt(aabb.max.x * invBucketSize);
-            int minY = Mathf.FloorToInt(aabb.min.y * invBucketSize);
-            int maxY = Mathf.FloorToInt(aabb.max.y * invBucketSize);
-
-            for (int y = minY; y <= maxY; y++)
-            {
-                for (int x = minX; x <= maxX; x++)
-                {
-                    var key = new BucketKey(x, y);
-                    if (!pickBuckets.TryGetValue(key, out var bucket))
-                    {
-                        bucket = RentList(8);
-                        pickBuckets[key] = bucket;
-                    }
-
-                    for (int j = 0; j < bucket.Count; j++)
-                    {
-                        var other = bucket[j];
-                        int oi = other.tempBuildIndex;
-
-                        int minIndex = oi < i ? oi : i;
-                        int maxIndex = oi < i ? i : oi;
-                        ulong pairKey = ((ulong)(uint)minIndex << 32) | (uint)maxIndex;
-
-                        if (!checkedPairs.Add(pairKey))
-                        {
-                            continue;
-                        }
-
-                        if (!CellsOverlapByArea(c, other, aabbTolerance, overlapTolerance))
-                        {
-                            continue;
-                        }
-
-                        overlapCount++;
-                        c.name = "overlap";
-                        other.name = "overlap";
-
-                        if (overlapCount <= maxDetailedReport)
-                        {
-                            Debug.LogError(
-                                $"[Map] 检测到 Cell 重叠: #{oi} ({other.position.x:F4}, {other.position.y:F4}) <-> #{i} ({c.position.x:F4}, {c.position.y:F4})",
-                                this);
-                        }
-                    }
-
-                    bucket.Add(c);
-                }
-            }
-        }
-
-        if (overlapCount > 0)
-        {
-            if (overlapCount > maxDetailedReport)
-            {
-                Debug.LogError($"[Map] 其余 {overlapCount - maxDetailedReport} 对重叠已省略输出。", this);
-            }
-
-            Debug.LogError($"[Map] Cell 重叠检测失败，共发现 {overlapCount} 对重叠。", this);
-        }
-
-        ClearAndRecycle(pickBuckets);
-#endif
-    }
-
-    private static bool CellsOverlapByArea(Cell a, Cell b, float aabbTolerance, float overlapTolerance)
-    {
-        var aa = a.cachedAabb;
-        var bb = b.cachedAabb;
-
-        if (aa.max.x <= bb.min.x + aabbTolerance || bb.max.x <= aa.min.x + aabbTolerance
-            || aa.max.y <= bb.min.y + aabbTolerance || bb.max.y <= aa.min.y + aabbTolerance)
-        {
-            return false;
-        }
-
-        var pa = a.cachedWorldVertices;
-        var pb = b.cachedWorldVertices;
-
-        if (pa == null || pb == null || pa.Length < 3 || pb.Length < 3)
-        {
-            return false;
-        }
-
-        return ConvexPolygonsOverlapByArea(pa, pb, overlapTolerance);
-    }
-
-    private static bool ConvexPolygonsOverlapByArea(Vector2[] a, Vector2[] b, float overlapTolerance)
-    {
-        return !HasSeparatingAxisOrWithinTolerance(a, b, overlapTolerance)
-            && !HasSeparatingAxisOrWithinTolerance(b, a, overlapTolerance);
-    }
-
-    private static bool HasSeparatingAxisOrWithinTolerance(Vector2[] axisSource, Vector2[] target, float overlapTolerance)
-    {
-        const float minAxisLen = 1e-6f;
-
-        int n = axisSource.Length;
-        for (int i = 0; i < n; i++)
-        {
-            Vector2 p0 = axisSource[i];
-            Vector2 p1 = axisSource[(i + 1) % n];
-            Vector2 edge = p1 - p0;
-
-            float nx = -edge.y;
-            float ny = edge.x;
-            float len = Mathf.Sqrt(nx * nx + ny * ny);
-            if (len <= minAxisLen)
-            {
-                continue;
-            }
-
-            nx /= len;
-            ny /= len;
-
-            Project(axisSource, nx, ny, out float minA, out float maxA);
-            Project(target, nx, ny, out float minB, out float maxB);
-
-            // 小于等于容差的“重叠”按不重叠处理（容错）
-            if (maxA <= minB + overlapTolerance || maxB <= minA + overlapTolerance)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static void Project(Vector2[] polygon, float ax, float ay, out float min, out float max)
-    {
-        float v0 = polygon[0].x * ax + polygon[0].y * ay;
-        min = v0;
-        max = v0;
-
-        for (int i = 1; i < polygon.Length; i++)
-        {
-            float v = polygon[i].x * ax + polygon[i].y * ay;
-            if (v < min)
-            {
-                min = v;
-            }
-
-            if (v > max)
-            {
-                max = v;
-            }
-        }
-    }
-    #endregion
 }

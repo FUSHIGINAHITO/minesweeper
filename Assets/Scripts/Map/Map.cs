@@ -76,7 +76,10 @@ public abstract class Map : MonoBehaviour
 
         GenerateGrid();
 #if UNITY_EDITOR
-        ValidateNoCellOverlapInEditor();
+        if (Game.instance.debug)
+        {
+            ValidateNoCellOverlapInEditor();
+        }
 #endif
         BuildNeighbours();
 

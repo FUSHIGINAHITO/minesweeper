@@ -7,6 +7,7 @@ public class Game : MonoBehaviour
     public static Game instance => _instance;
     private static Game _instance;
 
+    public bool debug;
     public MainDataSO so;
 
     private Map[] maps;

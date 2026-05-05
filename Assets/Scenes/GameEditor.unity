@@ -615,7 +615,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.7735849, g: 0.7735849, b: 0.7735849, a: 0}
+  m_BackGroundColor: {r: 0.20125782, g: 0.20125782, b: 0.20125782, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -1305,6 +1305,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2100606055}
   - component: {fileID: 2100606056}
+  - component: {fileID: 2100606057}
   m_Layer: 0
   m_Name: TilingEdit
   m_TagString: Untagged
@@ -1341,14 +1342,47 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   worldCamera: {fileID: 519420031}
   mainDataSO: {fileID: 11400000, guid: c811e96267f284f47aee9e38dff4d27f, type: 2}
+  view: {fileID: 2100606057}
   placedRoot: {fileID: 2100606055}
   previewRoot: {fileID: 2100606055}
   tileButtonPrefab: {fileID: 6535300757597408147, guid: 5707300b2772af649b70cd1e9186626a, type: 3}
   tileButtonRoot: {fileID: 653290257}
   placementZ: 0
   cellScale: 1
-  cellTypeId: -1
+  edgeSnapTolerance: 0.1
+  edgeQuantizeScale: 10000
+  maxSnapRotateDeg: 90
+  snapNormalGapTolerance: 0.3
+  snapTangentialGapTolerance: 0.3
   previewAlpha: 0.45
+  previewValidColor: {r: 0.06189978, g: 1, b: 0, a: 1}
+  previewInvalidColor: {r: 1, g: 0, b: 0, a: 1}
+  placedOrderStart: 0
+  drawSnapGizmos: 1
+  handSnapEdgeGizmoColor: {r: 0, g: 1, b: 1, a: 1}
+  handOtherEdgesGizmoColor: {r: 0, g: 1, b: 1, a: 0.35}
+  boundarySnapEdgeGizmoColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  handNormalGizmoColor: {r: 1, g: 0, b: 1, a: 1}
+  boundaryNormalGizmoColor: {r: 1, g: 0.5, b: 0, a: 1}
+  normalGizmoLength: 0.35
+  snapEdgePointGizmoRadius: 0.03
+--- !u!114 &2100606057
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100606054}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba728aa2aba24254a9c552c25e90d53c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  previewMoveSmoothTime: 0.04
+  previewRotateSmoothTime: 0.04
+  previewScaleSmoothTime: 0.04
+  previewMaxMoveSpeed: 100
+  snapPreviewOnRebuild: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

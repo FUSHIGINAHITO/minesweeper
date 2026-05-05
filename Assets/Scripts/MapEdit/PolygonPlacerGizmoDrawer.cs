@@ -10,6 +10,8 @@ public partial class PolygonPlacer : MonoBehaviour
     [SerializeField] private Color boundaryOtherEdgesGizmoColor = new Color(1f, 0.92f, 0.016f, 0.35f);
     [SerializeField] private Color handNormalGizmoColor = Color.magenta;
     [SerializeField] private Color boundaryNormalGizmoColor = new Color(1f, 0.5f, 0f, 1f);
+    [SerializeField] private Color overlapHandPolygonColor = new Color(1f, 0f, 0f, 1f);
+    [SerializeField] private Color overlapPlacedPolygonColor = new Color(1f, 0.4f, 0f, 1f);
     [SerializeField, Min(0.01f)] private float normalGizmoLength = 0.35f;
     [SerializeField, Min(0.001f)] private float snapEdgePointGizmoRadius = 0.03f;
 
@@ -28,7 +30,6 @@ public partial class PolygonPlacer : MonoBehaviour
         boundaryTracker.EnsureBoundaryEdges(mainDataSO, cellScale, edgeQuantizeScale);
         var boundaryEdges = boundaryTracker.BoundaryEdges;
 
-        // 1) 始终绘制场上边界的所有边
         Gizmos.color = boundaryOtherEdgesGizmoColor;
         for (int i = 0; i < boundaryEdges.Count; i++)
         {
@@ -38,7 +39,6 @@ public partial class PolygonPlacer : MonoBehaviour
             Gizmos.DrawLine(a, b);
         }
 
-        // 2) 始终绘制手上多边形的所有边（有选中 tile 时）
         bool hasValidTile =
             currentTileIndex >= 0 &&
             currentTileIndex < mainDataSO.tiles.Count &&
@@ -83,7 +83,12 @@ public partial class PolygonPlacer : MonoBehaviour
             }
         }
 
-        // 3) 有吸附时：高亮吸附边 + 端点小球 + 法线
+        if (gizmoHasOverlap && gizmoOverlapHandPolygon != null && gizmoOverlapPlacedPolygon != null)
+        {
+            DrawPolygonGizmo(gizmoOverlapHandPolygon, overlapHandPolygonColor);
+            DrawPolygonGizmo(gizmoOverlapPlacedPolygon, overlapPlacedPolygonColor);
+        }
+
         bool showSnapDetails = hasActiveBoundaryEdge && hasSnapSolution && hasValidHandSnapEdge;
         if (!showSnapDetails)
         {
@@ -132,6 +137,24 @@ public partial class PolygonPlacer : MonoBehaviour
             Gizmos.color = boundaryNormalGizmoColor;
             Gizmos.DrawLine(boundaryMid, boundaryNormalEnd);
             Gizmos.DrawSphere(boundaryNormalEnd, snapEdgePointGizmoRadius * 0.8f);
+        }
+    }
+
+    private void DrawPolygonGizmo(Vector2[] poly, Color color)
+    {
+        if (poly == null || poly.Length < 2)
+        {
+            return;
+        }
+
+        Gizmos.color = color;
+        for (int i = 0; i < poly.Length; i++)
+        {
+            Vector2 a2 = poly[i];
+            Vector2 b2 = poly[(i + 1) % poly.Length];
+            Vector3 a = new Vector3(a2.x, a2.y, placementZ);
+            Vector3 b = new Vector3(b2.x, b2.y, placementZ);
+            Gizmos.DrawLine(a, b);
         }
     }
 }

@@ -73,11 +73,18 @@ public sealed class PolygonBoundaryTracker
     private readonly List<BoundaryEdge> boundaryEdges = new();
     private bool boundaryDirty = true;
 
+    // internal quantization for stored motif data
+    private const float PositionStoreQuantizeScale = 100000f;
+    private const float RotationStoreQuantizeScale = 10000f;
+
     public int PlacedTileCount => placedTiles.Count;
     public IReadOnlyList<BoundaryEdge> BoundaryEdges => boundaryEdges;
 
     public void AddPlacedTile(int tileIndex, Vector2 position, float rotationDeg)
     {
+        position = QuantizeVec2(position, PositionStoreQuantizeScale);
+        rotationDeg = QuantizeFloat(rotationDeg, RotationStoreQuantizeScale);
+
         placedTiles.Add(new PlacedTileData
         {
             tileIndex = tileIndex,
@@ -96,6 +103,164 @@ public sealed class PolygonBoundaryTracker
         }
 
         RebuildBoundaryEdges(mainDataSO, cellScale, edgeQuantizeScale);
+    }
+
+    public bool OverlapsAnyPlaced(int tileIndex, Vector2 position, float rotationDeg, MainDataSO mainDataSO, float cellScale)
+    {
+        return TryGetOverlapPair(tileIndex, position, rotationDeg, mainDataSO, cellScale, out _, out _, out _);
+    }
+
+    public bool TryGetOverlapPair(
+        int tileIndex,
+        Vector2 position,
+        float rotationDeg,
+        MainDataSO mainDataSO,
+        float cellScale,
+        out Vector2[] candidatePolygon,
+        out Vector2[] placedPolygon,
+        out float overlapArea)
+    {
+        candidatePolygon = null;
+        placedPolygon = null;
+        overlapArea = 0f;
+
+        if (placedTiles.Count == 0)
+        {
+            return false;
+        }
+
+        position = QuantizeVec2(position, PositionStoreQuantizeScale);
+        rotationDeg = QuantizeFloat(rotationDeg, RotationStoreQuantizeScale);
+
+        TileSO tile = mainDataSO.tiles[tileIndex];
+        candidatePolygon = BuildWorldVertices(tile, position, rotationDeg, cellScale);
+        Rect candidateAabb = BuildAabb(candidatePolygon);
+
+        float bestArea = 0f;
+        Vector2[] bestOther = null;
+
+        for (int i = 0; i < placedTiles.Count; i++)
+        {
+            PlacedTileData d = placedTiles[i];
+            TileSO otherTile = mainDataSO.tiles[d.tileIndex];
+            Vector2[] other = BuildWorldVertices(otherTile, d.position, d.rotationDeg, cellScale);
+
+            Rect otherAabb = BuildAabb(other);
+            if (!candidateAabb.Overlaps(otherAabb, true))
+            {
+                continue;
+            }
+
+            float area = EstimateOverlapArea(candidatePolygon, other, 56);
+            if (area > bestArea)
+            {
+                bestArea = area;
+                bestOther = other;
+            }
+        }
+
+        if (bestOther == null)
+        {
+            return false;
+        }
+
+        placedPolygon = bestOther;
+        overlapArea = bestArea;
+        return true;
+    }
+
+    private static float EstimateOverlapArea(Vector2[] a, Vector2[] b, int samplesPerAxis)
+    {
+        Rect ra = BuildAabb(a);
+        Rect rb = BuildAabb(b);
+
+        float xMin = Mathf.Max(ra.xMin, rb.xMin);
+        float xMax = Mathf.Min(ra.xMax, rb.xMax);
+        float yMin = Mathf.Max(ra.yMin, rb.yMin);
+        float yMax = Mathf.Min(ra.yMax, rb.yMax);
+
+        float w = xMax - xMin;
+        float h = yMax - yMin;
+        if (w <= 1e-6f || h <= 1e-6f)
+        {
+            return 0f;
+        }
+
+        int nxBase = Mathf.Max(8, samplesPerAxis);
+        float aspect = h / w;
+        aspect = Mathf.Clamp(aspect, 0.25f, 4f);
+
+        int nx = nxBase;
+        int ny = Mathf.RoundToInt(nxBase * aspect);
+
+        const int maxAxis = 128;
+        nx = Mathf.Clamp(nx, 8, maxAxis);
+        ny = Mathf.Clamp(ny, 8, maxAxis);
+
+        float dx = w / nx;
+        float dy = h / ny;
+        float cellArea = dx * dy;
+
+        int insideCount = 0;
+        for (int iy = 0; iy < ny; iy++)
+        {
+            float py = yMin + (iy + 0.5f) * dy;
+            for (int ix = 0; ix < nx; ix++)
+            {
+                float px = xMin + (ix + 0.5f) * dx;
+                Vector2 p = new Vector2(px, py);
+
+                if (PointInPolygon(p, a) && PointInPolygon(p, b))
+                {
+                    insideCount++;
+                }
+            }
+        }
+
+        return insideCount * cellArea;
+    }
+
+    private static bool PointInPolygon(Vector2 p, Vector2[] poly)
+    {
+        bool inside = false;
+        for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
+        {
+            Vector2 pi = poly[i];
+            Vector2 pj = poly[j];
+
+            bool intersect = ((pi.y > p.y) != (pj.y > p.y))
+                && (p.x < (pj.x - pi.x) * (p.y - pi.y) / ((pj.y - pi.y) + 1e-12f) + pi.x);
+
+            if (intersect)
+            {
+                inside = !inside;
+            }
+        }
+
+        return inside;
+    }
+
+    private static Rect BuildAabb(Vector2[] verts)
+    {
+        float minX = float.PositiveInfinity;
+        float minY = float.PositiveInfinity;
+        float maxX = float.NegativeInfinity;
+        float maxY = float.NegativeInfinity;
+
+        for (int i = 0; i < verts.Length; i++)
+        {
+            Vector2 p = verts[i];
+            if (p.x < minX)
+                minX = p.x;
+            if (p.y < minY)
+                minY = p.y;
+            if (p.x > maxX)
+                maxX = p.x;
+            if (p.y > maxY)
+                maxY = p.y;
+        }
+
+        return Rect.MinMaxRect(minX, minY, maxX, maxY);
     }
 
     private void RebuildBoundaryEdges(MainDataSO mainDataSO, float cellScale, float edgeQuantizeScale)
@@ -161,5 +326,27 @@ public sealed class PolygonBoundaryTracker
         }
 
         return dst;
+    }
+
+    private static float QuantizeFloat(float v, float scale)
+    {
+        if (scale <= 0f)
+        {
+            return v;
+        }
+
+        return Mathf.Round(v * scale) / scale;
+    }
+
+    private static Vector2 QuantizeVec2(Vector2 v, float scale)
+    {
+        if (scale <= 0f)
+        {
+            return v;
+        }
+
+        return new Vector2(
+            Mathf.Round(v.x * scale) / scale,
+            Mathf.Round(v.y * scale) / scale);
     }
 }

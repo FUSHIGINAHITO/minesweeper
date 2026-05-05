@@ -20,6 +20,10 @@ public partial class PolygonPlacer : MonoBehaviour
     [Header("Cell")]
     [SerializeField] private float cellScale = 1f;
 
+    [Header("Pose Quantization")]
+    [SerializeField] private float positionQuantizeScale = 100000f; // 1e-5
+    [SerializeField] private float rotationQuantizeScale = 10000f;  // 1e-4 deg
+
     [Header("Snap")]
     [SerializeField] private float edgeSnapTolerance = 0.02f;
     [SerializeField] private float edgeQuantizeScale = 10000f;
@@ -27,6 +31,11 @@ public partial class PolygonPlacer : MonoBehaviour
     [SerializeField, Range(0f, 30f)] private float nearestNormalTieDeg = 3f;
     [SerializeField] private float snapNormalGapTolerance = 0.04f;
     [SerializeField] private float snapTangentialGapTolerance = 0.04f;
+
+    [Header("Overlap")]
+    [SerializeField] private float overlapAreaBlockThreshold = 0.0001f;
+    [SerializeField] private bool logOverlapArea = false;
+    [SerializeField] private float debugOverlapArea;
 
     [Header("Preview")]
     [SerializeField, Range(0.05f, 1f)] private float previewAlpha = 0.45f;
@@ -53,6 +62,11 @@ public partial class PolygonPlacer : MonoBehaviour
 
     private Vector2 currentMouseWorld2D;
     private int nextPlacedOrder;
+
+    // overlap gizmo
+    private bool gizmoHasOverlap;
+    private Vector2[] gizmoOverlapHandPolygon;
+    private Vector2[] gizmoOverlapPlacedPolygon;
 
     private void Start()
     {
@@ -93,6 +107,7 @@ public partial class PolygonPlacer : MonoBehaviour
             hasActiveBoundaryEdge = false;
             isSnapLatched = false;
             selectedSnapEdgeIndex = -1;
+            ClearOverlapGizmoState();
         }
 
         view.SetPreviewPose(snappedPos, snappedRotationDeg, cellScale, nextPlacedOrder);
@@ -129,6 +144,7 @@ public partial class PolygonPlacer : MonoBehaviour
         hasSnapSolution = false;
         previewCanPlace = false;
         hasActiveBoundaryEdge = false;
+        ClearOverlapGizmoState();
 
         Vector3 pos = new(0f, 0f, placementZ);
         if (TryGetMouseWorldOnPlacementPlane(out Vector3 worldPos))
@@ -151,6 +167,7 @@ public partial class PolygonPlacer : MonoBehaviour
         previewCanPlace = false;
         hasActiveBoundaryEdge = false;
         isSnapLatched = false;
+        ClearOverlapGizmoState();
         view.ClearPreview();
     }
 
@@ -168,6 +185,7 @@ public partial class PolygonPlacer : MonoBehaviour
             hasActiveBoundaryEdge = false;
             selectedSnapEdgeIndex = -1;
             isSnapLatched = false;
+            ClearOverlapGizmoState();
             return;
         }
 
@@ -176,17 +194,17 @@ public partial class PolygonPlacer : MonoBehaviour
         Vector2 center = new(mouseWorld.x, mouseWorld.y);
 
         if (!snapSolver.TryFindNearestSnapPair(
-        tile,
-        center,
-        heldRotationDeg,
-        boundaryTracker.BoundaryEdges,
-        cellScale,
-        maxSnapRotateDeg,
-        nearestNormalTieDeg,
-        snapNormalGapTolerance,
-        snapTangentialGapTolerance,
-        out BoundaryEdge edge,
-        out int detectedEdgeIndex))
+                tile,
+                center,
+                heldRotationDeg,
+                boundaryTracker.BoundaryEdges,
+                cellScale,
+                maxSnapRotateDeg,
+                nearestNormalTieDeg,
+                snapNormalGapTolerance,
+                snapTangentialGapTolerance,
+                out BoundaryEdge edge,
+                out int detectedEdgeIndex))
         {
             hasSnapSolution = false;
             previewCanPlace = false;
@@ -195,10 +213,10 @@ public partial class PolygonPlacer : MonoBehaviour
             isSnapLatched = false;
             snappedPos = mouseWorld;
             snappedRotationDeg = heldRotationDeg;
+            ClearOverlapGizmoState();
             return;
         }
 
-        // 首次吸附成功时才锁存
         if (!isSnapLatched)
         {
             activeBoundaryEdge = edge;
@@ -208,7 +226,6 @@ public partial class PolygonPlacer : MonoBehaviour
 
         hasActiveBoundaryEdge = true;
 
-        // 锁存后始终使用锁存边 + 锁存索引求解
         if (snapSolver.TrySolveSnapPoseForSpecificEdge(
                 tile,
                 activeBoundaryEdge,
@@ -221,7 +238,8 @@ public partial class PolygonPlacer : MonoBehaviour
             snappedPos = new Vector3(pos.x, pos.y, placementZ);
             snappedRotationDeg = rotDeg;
             hasSnapSolution = true;
-            previewCanPlace = true;
+
+            UpdateOverlapAndCanPlace(new Vector2(pos.x, pos.y), rotDeg);
         }
         else
         {
@@ -232,6 +250,7 @@ public partial class PolygonPlacer : MonoBehaviour
             isSnapLatched = false;
             snappedPos = mouseWorld;
             snappedRotationDeg = heldRotationDeg;
+            ClearOverlapGizmoState();
         }
     }
 
@@ -267,7 +286,7 @@ public partial class PolygonPlacer : MonoBehaviour
             snappedPos = new Vector3(pos.x, pos.y, placementZ);
 
             hasSnapSolution = true;
-            previewCanPlace = true;
+            UpdateOverlapAndCanPlace(new Vector2(pos.x, pos.y), rotDeg);
         }
         else
         {
@@ -276,6 +295,7 @@ public partial class PolygonPlacer : MonoBehaviour
             hasActiveBoundaryEdge = false;
             isSnapLatched = false;
             selectedSnapEdgeIndex = -1;
+            ClearOverlapGizmoState();
         }
     }
 
@@ -288,17 +308,85 @@ public partial class PolygonPlacer : MonoBehaviour
 
         TileSO tile = mainDataSO.tiles[currentTileIndex];
 
-        Vector3 exactPos = new(snappedPos.x, snappedPos.y, placementZ);
-        float exactRot = snappedRotationDeg;
+        Vector2 qPos2 = QuantizeVec2(new Vector2(snappedPos.x, snappedPos.y), positionQuantizeScale);
+        float qRot = QuantizeFloat(snappedRotationDeg, rotationQuantizeScale);
+
+        Vector3 exactPos = new(qPos2.x, qPos2.y, placementZ);
+        float exactRot = qRot;
 
         view.AddPlaced(tile, exactPos, exactRot, cellScale, placedRoot, nextPlacedOrder);
         nextPlacedOrder++;
 
-        boundaryTracker.AddPlacedTile(currentTileIndex, new Vector2(exactPos.x, exactPos.y), exactRot);
-        
+        boundaryTracker.AddPlacedTile(currentTileIndex, qPos2, exactRot);
+
         isSnapLatched = false;
         selectedSnapEdgeIndex = -1;
         hasActiveBoundaryEdge = false;
+        ClearOverlapGizmoState();
+    }
+
+    private void UpdateOverlapAndCanPlace(Vector2 pos, float rotDeg)
+    {
+        Vector2 qPos = QuantizeVec2(pos, positionQuantizeScale);
+        float qRot = QuantizeFloat(rotDeg, rotationQuantizeScale);
+
+        if (boundaryTracker.TryGetOverlapPair(
+                currentTileIndex,
+                qPos,
+                qRot,
+                mainDataSO,
+                cellScale,
+                out Vector2[] handPoly,
+                out Vector2[] placedPoly,
+                out float overlapArea))
+        {
+            gizmoHasOverlap = true;
+            gizmoOverlapHandPolygon = handPoly;
+            gizmoOverlapPlacedPolygon = placedPoly;
+            debugOverlapArea = overlapArea;
+
+            previewCanPlace = overlapArea <= overlapAreaBlockThreshold;
+
+            if (logOverlapArea && !previewCanPlace)
+            {
+                Debug.Log($"[PolygonPlacer] overlapArea={overlapArea:F6}, threshold={overlapAreaBlockThreshold:F6}");
+            }
+
+            return;
+        }
+
+        debugOverlapArea = 0f;
+        ClearOverlapGizmoState();
+        previewCanPlace = true;
+    }
+
+    private static float QuantizeFloat(float v, float scale)
+    {
+        if (scale <= 0f)
+        {
+            return v;
+        }
+
+        return Mathf.Round(v * scale) / scale;
+    }
+
+    private static Vector2 QuantizeVec2(Vector2 v, float scale)
+    {
+        if (scale <= 0f)
+        {
+            return v;
+        }
+
+        return new Vector2(
+            Mathf.Round(v.x * scale) / scale,
+            Mathf.Round(v.y * scale) / scale);
+    }
+
+    private void ClearOverlapGizmoState()
+    {
+        gizmoHasOverlap = false;
+        gizmoOverlapHandPolygon = null;
+        gizmoOverlapPlacedPolygon = null;
     }
 
     private bool TryGetMouseWorldOnPlacementPlane(out Vector3 worldPos)

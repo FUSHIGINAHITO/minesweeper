@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 373a6d1dba1171d43ab386161ac07e94, type: 3}
+  m_Name: Hepta
+  m_EditorClassIdentifier: 
+  shapeType: 4
+  polygonSprite: {fileID: 21300000, guid: d7a2497db0db1354f9896daff6046633, type: 3}
+  polygonShrinkSprite: {fileID: 21300000, guid: 8fb6c8424736fdb449be707bc6c9f0b7, type: 3}
+  polygonSDFTexture: {fileID: 2800000, guid: 6338356e1d9bcb14da7c410c1d4b094f, type: 3}
+  polygonMaterialOverride: {fileID: 2100000, guid: c78b079dd4bef7d4db5b60a8b813fa2b, type: 2}
+  polygonBorderMaterialOverride: {fileID: 2100000, guid: 873747ede257c0440a74695b598969a1, type: 2}
+  bevelSize: 0.2
+  inradiusRatio: 3.5966406
+  areaRatio: 8.392161
+  localVertices:
+  - {x: -0.5000001, y: -1.0382606}
+  - {x: 0.49999985, y: -1.0382607}
+  - {x: 1.1234897, y: -0.2564293}
+  - {x: 0.9009689, y: 0.7184986}
+  - {x: 0.00000008700245, y: 1.1523824}
+  - {x: -0.90096885, y: 0.7184986}
+  - {x: -1.1234897, y: -0.25642914}

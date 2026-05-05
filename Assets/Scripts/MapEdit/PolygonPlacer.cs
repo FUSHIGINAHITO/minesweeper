@@ -5,7 +5,7 @@ public class PolygonPlacer : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private Camera worldCamera;
-    [SerializeField] private PolygonTileCatalog catalog;
+    [SerializeField] private MainDataSO mainDataSO;
     [SerializeField] private Transform placedRoot;
     [SerializeField] private Transform previewRoot;
 
@@ -16,14 +16,10 @@ public class PolygonPlacer : MonoBehaviour
     [Header("Placement Plane (2D XY)")]
     [SerializeField] private float placementZ = 0f;
 
-    [Header("Cell Init")]
-    [SerializeField] private float cellScale = 1f;
-    [SerializeField] private int cellTypeId = -1;
-
     [Header("Preview")]
     [SerializeField, Range(0.05f, 1f)] private float previewAlpha = 0.45f;
 
-    private PolygonTileCatalog.PolygonTileDefinition currentDef;
+    private TileSO currentTile;
     private Cell previewCell;
     private float currentRotationDeg;
 
@@ -59,20 +55,21 @@ public class PolygonPlacer : MonoBehaviour
 
     private void BuildTileButtonsOnce()
     {
-        for (int i = 0; i < catalog.Count; i++)
+        for (int i = 0; i < mainDataSO.tiles.Count; i++)
         {
-            var def = catalog.Get(i);
-            var btn = Instantiate(tileButtonPrefab, tileButtonRoot);
+            TileSO tile = mainDataSO.tiles[i];
+            PolygonButton btn = Instantiate(tileButtonPrefab, tileButtonRoot);
             int capturedIndex = i;
-            btn.image.sprite = PoolManager.instance.GetSharedPolygonSprite(def.shapeType);
+
+            btn.image.sprite = tile.polygonSprite;
             btn.button.onClick.AddListener(() => SelectTileByIndex(capturedIndex));
-            btn.name = $"TileButton_{capturedIndex}_{def.id}";
+            btn.name = $"TileButton_{capturedIndex}_{tile.shapeType}";
         }
     }
 
     public void SelectTileByIndex(int index)
     {
-        currentDef = catalog.Get(index);
+        currentTile = mainDataSO.tiles[index];
         currentRotationDeg = 0f;
         RebuildPreview();
     }
@@ -89,7 +86,7 @@ public class PolygonPlacer : MonoBehaviour
 
     public void CancelHolding()
     {
-        currentDef = null;
+        currentTile = null;
         ReturnPreviewToPool();
     }
 
@@ -97,22 +94,20 @@ public class PolygonPlacer : MonoBehaviour
     {
         ReturnPreviewToPool();
 
+        Vector3 pos = new Vector3(0f, 0f, placementZ);
         if (TryGetMouseWorldOnPlacementPlane(out Vector3 worldPos))
         {
-            previewCell = RequireAndInitCell(currentDef, worldPos, currentRotationDeg);
-        }
-        else
-        {
-            previewCell = RequireAndInitCell(currentDef, new Vector3(0f, 0f, placementZ), currentRotationDeg);
+            pos = worldPos;
         }
 
+        previewCell = RequireAndInitCell(currentTile, pos, currentRotationDeg);
         previewCell.transform.SetParent(previewRoot, true);
         ApplyPreviewVisual(previewCell, true);
     }
 
     private void PlaceCurrentAtPreview()
     {
-        if (currentDef == null || previewCell == null)
+        if (currentTile == null || previewCell == null)
         {
             return;
         }
@@ -120,15 +115,15 @@ public class PolygonPlacer : MonoBehaviour
         Vector3 pos = previewCell.transform.position;
         float rotZ = previewCell.transform.eulerAngles.z;
 
-        var placed = RequireAndInitCell(currentDef, pos, rotZ);
+        Cell placed = RequireAndInitCell(currentTile, pos, rotZ);
         placed.transform.SetParent(placedRoot, true);
         ApplyPreviewVisual(placed, false);
     }
 
-    private Cell RequireAndInitCell(PolygonTileCatalog.PolygonTileDefinition def, Vector3 pos, float rotDeg)
+    private Cell RequireAndInitCell(TileSO tile, Vector3 pos, float rotDeg)
     {
-        var cell = PoolManager.instance.cellPool.Require();
-        cell.Init(def.shapeType, pos, Quaternion.Euler(0f, 0f, rotDeg), cellScale, false, cellTypeId);
+        Cell cell = PoolManager.instance.cellPool.Require();
+        cell.Init(tile.shapeType, pos, Quaternion.Euler(0f, 0f, rotDeg), 1f, false, -1);
         cell.InitShowArt();
         return cell;
     }

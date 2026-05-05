@@ -18,7 +18,7 @@ public class ColorValidationRunner : MonoBehaviour
 
         var oldState = Random.state;
         Random.InitState(randomSeed);
-        var colors = data.GeneratePerceptualHueCycleColors(colorCount);
+        var colors = ColorGenerator.GeneratePerceptualHueCycleColors(data, colorCount);
         Random.state = oldState;
 
         int outOfGamutCount = 0;

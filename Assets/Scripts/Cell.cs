@@ -28,7 +28,8 @@ public class Cell : CellPool.PoolObj
     [NonSerialized, HideInInspector] public Quaternion rotation;
     [NonSerialized, HideInInspector] public float scale;
 
-    public static MainDataSO so;
+    public static MainDataSO mainDataSO;
+    [NonSerialized, HideInInspector] public TileSO so;
 
     private void Awake()
     {
@@ -55,12 +56,13 @@ public class Cell : CellPool.PoolObj
 
         trans.SetPositionAndRotation(position, rotation);
         trans.localScale = scale * Vector3.one;
+        so = mainDataSO.GetTileSO(shapeType);
     }
 
     public void InitShowArt()
     {
         ShowRevealArt(false);
-        image.color = isBorder ? so.borderColor : so.defaultColor;
+        image.color = isBorder ? mainDataSO.borderColor : mainDataSO.defaultColor;
     }
 
     public void GetUnshownNeighbors(List<Cell> res)
@@ -81,7 +83,7 @@ public class Cell : CellPool.PoolObj
         if (!isRevealed || force)
         {
             isRevealed = true;
-            image.color = isMine ? so.mineColor : so.revealedColor;
+            image.color = isMine ? mainDataSO.mineColor : mainDataSO.revealedColor;
 
             ShowRevealArt(true);
             ShowText();
@@ -105,21 +107,21 @@ public class Cell : CellPool.PoolObj
     public void Flag()
     {
         isFlagged = true;
-        image.color = so.flagColor;
+        image.color = mainDataSO.flagColor;
         Restore();
     }
 
     public void Unflag()
     {
         isFlagged = false;
-        image.color = so.defaultColor;
+        image.color = mainDataSO.defaultColor;
         Restore();
     }
 
     public void Pressed()
     {
         ShowRevealArt(true);
-        image.color = so.pressedColor;
+        image.color = mainDataSO.pressedColor;
     }
 
     public void Restore()
@@ -127,12 +129,12 @@ public class Cell : CellPool.PoolObj
         if (!isRevealed)
         {
             ShowRevealArt(false);
-            image.color = isFlagged ? so.flagColor : so.defaultColor;
+            image.color = isFlagged ? mainDataSO.flagColor : mainDataSO.defaultColor;
         }
         else
         {
             ShowRevealArt(true);
-            image.color = so.revealedColor;
+            image.color = mainDataSO.revealedColor;
         }
     }
 
@@ -141,12 +143,12 @@ public class Cell : CellPool.PoolObj
         if (!isRevealed)
         {
             ShowRevealArt(!isFlagged);
-            image.color = isFlagged ? so.chordColorFlag : so.chordColor;
+            image.color = isFlagged ? mainDataSO.chordColorFlag : mainDataSO.chordColor;
         }
         else
         {
             ShowRevealArt(true);
-            image.color = so.chordColorRevealed;
+            image.color = mainDataSO.chordColorRevealed;
         }
     }
 
@@ -160,28 +162,28 @@ public class Cell : CellPool.PoolObj
     {
         if (v)
         {
-            image.sharedMaterial = so.polygonRevealedMaterial;
-            image.sprite = so.polygonShrinkSprites[(int)shapeType];
+            image.sharedMaterial = mainDataSO.polygonRevealedMaterial;
+            image.sprite = so.polygonShrinkSprite;
         }
         else
         {
             if (isBorder)
             {
-                image.sharedMaterial = PoolManager.instance.GetSharedPolygonBorderMaterial(shapeType);
+                image.sharedMaterial = so.polygonBorderMaterialOverride;
             }
             else
             {
-                image.sharedMaterial = PoolManager.instance.GetSharedPolygonMaterial(shapeType);
+                image.sharedMaterial = so.polygonMaterialOverride;
             }
             
-            image.sprite = PoolManager.instance.GetSharedPolygonSprite(shapeType);
+            image.sprite = so.polygonSprite;
         }
     }
 
     public void ShowColor()
     {
-        image.sharedMaterial = PoolManager.instance.GetSharedPolygonMaterial(shapeType);
-        image.sprite = PoolManager.instance.GetSharedPolygonSprite(shapeType);
+        image.sharedMaterial = so.polygonMaterialOverride;
+        image.sprite = so.polygonSprite;
         image.color = Game.instance.map.cellColorList[typeId];
 
         ReturnText();
@@ -189,7 +191,7 @@ public class Cell : CellPool.PoolObj
 
     public void ShowAns()
     {
-        image.color = isMine ? so.mineColor : so.revealedColor;
+        image.color = isMine ? mainDataSO.mineColor : mainDataSO.revealedColor;
         Reveal(true);
     }
 
@@ -214,7 +216,7 @@ public class Cell : CellPool.PoolObj
             text.transform.SetPositionAndRotation(trans.position, Quaternion.identity);
             text.transform.localScale = Game.instance.map.textSize * Vector3.one;
             text.text.text = value.ToString();
-            text.text.color = so.colors[Mathf.Clamp(value, 0, so.colors.Length - 1)];
+            text.text.color = mainDataSO.colors[Mathf.Clamp(value, 0, mainDataSO.colors.Length - 1)];
         }
     }
 }

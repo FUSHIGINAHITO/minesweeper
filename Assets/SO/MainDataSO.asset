@@ -12,42 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3effde318c07854baf658c13154de4e, type: 3}
   m_Name: MainDataSO
   m_EditorClassIdentifier: 
-  polygonSprites:
-  - {fileID: 21300000, guid: 1ebda113a8b511c45a1d95d38cc98e7d, type: 3}
-  - {fileID: 21300000, guid: c6a1ca7bf0b6a9444b719cd49b8a72eb, type: 3}
-  - {fileID: 21300000, guid: b92ac2bf50f511d4f9490c4500884d25, type: 3}
-  - {fileID: 21300000, guid: 05133677f2467474894bfd7c8eb5bbb4, type: 3}
-  - {fileID: 21300000, guid: d7a2497db0db1354f9896daff6046633, type: 3}
-  - {fileID: 21300000, guid: 3b962b1fb2af94745b62d6338f809e34, type: 3}
-  - {fileID: 21300000, guid: 0e6f243c876895d48ad40672b813207d, type: 3}
-  - {fileID: 21300000, guid: 4593807b0e74a144dac6ece508b15ca7, type: 3}
-  - {fileID: 21300000, guid: 054634eb45b5a8d4cbdf00e546229e95, type: 3}
-  - {fileID: 21300000, guid: 8d86a7243bc814546955e383ba28f4f3, type: 3}
-  polygonSDFTextures:
-  - {fileID: 2800000, guid: a1c343bef9004f441a547cfcb1f21513, type: 3}
-  - {fileID: 2800000, guid: 2763c47c2253e82449607bddec8c707c, type: 3}
-  - {fileID: 2800000, guid: c033fa2a25625da4e97f93430996219a, type: 3}
-  - {fileID: 2800000, guid: 74f6cb92c37cba3468eeb5bb5e577715, type: 3}
-  - {fileID: 2800000, guid: 6338356e1d9bcb14da7c410c1d4b094f, type: 3}
-  - {fileID: 2800000, guid: 71d9c86f5030406478917c3d252a1338, type: 3}
-  - {fileID: 2800000, guid: f2ffb369e5c5c894fbb2f232f7a6641a, type: 3}
-  - {fileID: 2800000, guid: fed86bf4cdb2a7d4aa9370042dcb06e0, type: 3}
-  - {fileID: 2800000, guid: 60ee0d7ceca942e4a9f7cf691566dc97, type: 3}
-  - {fileID: 2800000, guid: 21a4bd731ec50f74f85d3d939557709d, type: 3}
-  polygonShrinkSprites:
-  - {fileID: 21300000, guid: 4f42e868697eef24990ee52f1e706c49, type: 3}
-  - {fileID: 21300000, guid: 8a486465f30fa8742bad534b4537ab51, type: 3}
-  - {fileID: 21300000, guid: 272637ee2d5573b479e724c395a0cc8f, type: 3}
-  - {fileID: 21300000, guid: 47d18fbd3cb8f254d83aaffa10c00513, type: 3}
-  - {fileID: 21300000, guid: 8fb6c8424736fdb449be707bc6c9f0b7, type: 3}
-  - {fileID: 21300000, guid: 34795ee2d9bccbb4087a63e8eb5a5861, type: 3}
-  - {fileID: 21300000, guid: 4ed713f25669b204686069df223a8d13, type: 3}
-  - {fileID: 21300000, guid: 4593d8e32b5f8c84aa4f464561c6ef9c, type: 3}
-  - {fileID: 21300000, guid: dbcf5b3e6f567ec41abbf701f3bb891b, type: 3}
-  - {fileID: 21300000, guid: 300af1fc422438845aa09f44a5d02c7b, type: 3}
+  tiles:
+  - {fileID: 11400000, guid: 7912faf3455997d48a55408a3e55af7a, type: 2}
+  - {fileID: 11400000, guid: f2ac0ca411dcd09409c7b1f8546027e7, type: 2}
+  - {fileID: 11400000, guid: 6c95e65d0df13964ca7260b166e51985, type: 2}
+  - {fileID: 11400000, guid: 3d3b71222ef815c41a66b4ff4ce7b7ca, type: 2}
+  - {fileID: 11400000, guid: 696188b76116a944984b7ac5111acba6, type: 2}
+  - {fileID: 11400000, guid: 3945e1202e723714fac50bf0787f8d37, type: 2}
+  - {fileID: 11400000, guid: 556c3c8b9ebbe7141ac470f7ce1bf4c3, type: 2}
+  - {fileID: 11400000, guid: ed39fcfcae07bf848b6aa8aa3d446f2f, type: 2}
+  - {fileID: 11400000, guid: 2731c9a1a291f3a4593aa0095c7aa467, type: 2}
+  - {fileID: 11400000, guid: 88acae3037e119c47b923b1cb342bcf0, type: 2}
   polygonBaseMaterial: {fileID: 2100000, guid: abfa4c3d6cab3ff45b0365e3254cdc6e, type: 2}
   polygonBorderMaterial: {fileID: 2100000, guid: 322ac68b5dbbbfa4aa4854a39c8d92b2, type: 2}
   polygonRevealedMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  textSize: 0.59
+  bevelSize: 0.2
   marginTopPercent: 0.05
   colors:
   - {r: 0, g: 0, b: 0, a: 0}
@@ -75,8 +55,6 @@ MonoBehaviour:
   bombMineColor: {r: 0.9622642, g: 0.31167662, b: 0.31167662, a: 1}
   wrongFlagColor: {r: 0.7882353, g: 0.52156866, b: 0.9607843, a: 1}
   normalBgColor: {r: 0.78616345, g: 0.78616345, b: 0.78616345, a: 1}
-  textSize: 0.59
-  bevelSize: 0.2
   lightness: 0.9
   chroma: 0.1
   alpha: 1

@@ -1340,7 +1340,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldCamera: {fileID: 519420031}
-  catalog: {fileID: 11400000, guid: 30841c07b3bc54647b688177f528d35a, type: 2}
+  mainDataSO: {fileID: 11400000, guid: c811e96267f284f47aee9e38dff4d27f, type: 2}
   placedRoot: {fileID: 2100606055}
   previewRoot: {fileID: 2100606055}
   tileButtonPrefab: {fileID: 6535300757597408147, guid: 5707300b2772af649b70cd1e9186626a, type: 3}

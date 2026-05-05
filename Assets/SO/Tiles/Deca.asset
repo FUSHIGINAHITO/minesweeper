@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 373a6d1dba1171d43ab386161ac07e94, type: 3}
+  m_Name: Deca
+  m_EditorClassIdentifier: 
+  shapeType: 7
+  polygonSprite: {fileID: 21300000, guid: 4593807b0e74a144dac6ece508b15ca7, type: 3}
+  polygonShrinkSprite: {fileID: 21300000, guid: 4593d8e32b5f8c84aa4f464561c6ef9c, type: 3}
+  polygonSDFTexture: {fileID: 2800000, guid: fed86bf4cdb2a7d4aa9370042dcb06e0, type: 3}
+  polygonMaterialOverride: {fileID: 2100000, guid: 94d2a6eb89e98ae4b9100c41c97d0dcf, type: 2}
+  polygonBorderMaterialOverride: {fileID: 2100000, guid: e72b1009f0d183542b91cdaf04f4b6b5, type: 2}
+  bevelSize: 0.2
+  inradiusRatio: 5.330704
+  areaRatio: 17.769014
+  localVertices:
+  - {x: -0.50000006, y: -1.5388417}
+  - {x: 0.49999997, y: -1.5388418}
+  - {x: 1.3090171, y: -0.95105654}
+  - {x: 1.618034, y: 0}
+  - {x: 1.3090171, y: 0.95105654}
+  - {x: 0.49999997, y: 1.5388418}
+  - {x: -0.50000006, y: 1.5388417}
+  - {x: -1.3090171, y: 0.9510564}
+  - {x: -1.618034, y: -0.00000014145303}
+  - {x: -1.309017, y: -0.9510567}

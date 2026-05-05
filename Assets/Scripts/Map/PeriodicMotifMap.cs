@@ -177,8 +177,9 @@ public abstract class PeriodicMotifMap : TilingMap
 
         Vector2[] BuildWorldVertices(CellShapeType shapeType, Vector2 center, float rotDeg)
         {
-            var localVerts = PoolManager.instance.GetSharedLocalVertices(shapeType);
-            int count = localVerts.Count;
+            var tile = Game.instance.so.GetTileSO(shapeType);
+            var localVerts = tile.localVertices;
+            int count = localVerts.Length;
             var worldVerts = new Vector2[count];
 
             float rad = rotDeg * Mathf.Deg2Rad;

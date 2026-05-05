@@ -1,46 +1,9 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "MainDataSO", menuName = "Minesweeper/MainData", order = 0)]
-public class MainDataSO : ScriptableObject
+public class ColorGenerator : ScriptableObject
 {
-    public List<Sprite> polygonSprites = new();
-    public List<Texture> polygonSDFTextures = new();
-    public List<Sprite> polygonShrinkSprites = new();
-    public Material polygonBaseMaterial;
-    public Material polygonBorderMaterial;
-    public Material polygonRevealedMaterial;
-
-    [Header("屏幕边缘留白（统一厚度百分比，基于屏幕高度）")]
-    public float marginTopPercent = 0.05f;
-
-    public Color[] colors;
-
-    [Header("格子颜色配置")]
-    public Color borderColor;
-    public Color defaultColor;
-    public Color pressedColor;
-    public Color chordColor;
-    public Color chordColorFlag;
-    public Color chordColorRevealed;
-    public Color flagColor;
-    public Color revealedColor;
-    public Color mineColor;
-    public Color bombMineColor;
-    public Color wrongFlagColor;
-
-    [Header("界面背景色")]
-    public Color normalBgColor;
-
-    public float textSize;
-    public float bevelSize;
-
-    [Header("程序化连续配色(OKLCH)")]
-    [Range(0f, 1f)] public float lightness = 0.72f;
-    [Range(0f, 1f)] public float chroma = 0.16f;
-    [Range(0f, 1f)] public float alpha = 1f;
-
-    public Color[] GeneratePerceptualHueCycleColors(int colorCount)
+    public static Color[] GeneratePerceptualHueCycleColors(MainDataSO so, int colorCount)
     {
         if (colorCount < 1)
         {
@@ -58,7 +21,7 @@ public class MainDataSO : ScriptableObject
             float h = reverse ? startHue - i * hueStep : startHue + i * hueStep;
             h = h - Mathf.Floor(h);
 
-            result[i] = OklchToSrgbWithGamutFit(lightness, chroma, h, alpha);
+            result[i] = OklchToSrgbWithGamutFit(so.lightness, so.chroma, h, so.alpha);
         }
 
         return result;

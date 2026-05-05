@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 373a6d1dba1171d43ab386161ac07e94, type: 3}
+  m_Name: Octa
+  m_EditorClassIdentifier: 
+  shapeType: 5
+  polygonSprite: {fileID: 21300000, guid: 3b962b1fb2af94745b62d6338f809e34, type: 3}
+  polygonShrinkSprite: {fileID: 21300000, guid: 34795ee2d9bccbb4087a63e8eb5a5861, type: 3}
+  polygonSDFTexture: {fileID: 2800000, guid: 71d9c86f5030406478917c3d252a1338, type: 3}
+  polygonMaterialOverride: {fileID: 2100000, guid: a54f317a13c86884ca0e746b6f8761e6, type: 2}
+  polygonBorderMaterialOverride: {fileID: 2100000, guid: 6d03a06f695064e4eae8abacaf4846aa, type: 2}
+  bevelSize: 0.2
+  inradiusRatio: 4.1815405
+  areaRatio: 11.150774
+  localVertices:
+  - {x: -0.50000006, y: -1.2071067}
+  - {x: 0.49999997, y: -1.2071067}
+  - {x: 1.2071067, y: -0.5}
+  - {x: 1.2071067, y: 0.49999997}
+  - {x: 0.49999997, y: 1.2071067}
+  - {x: -0.50000006, y: 1.2071067}
+  - {x: -1.2071068, y: 0.49999976}
+  - {x: -1.2071067, y: -0.49999997}

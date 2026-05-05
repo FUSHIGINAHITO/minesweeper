@@ -43,9 +43,10 @@ public abstract class Map : MonoBehaviour
         var cam = UIManager.instance.mainCamera;
         var so = Game.instance.so;
 
-        var s = Mathf.Sqrt(PoolManager.instance.GetSharedAreaRatio(BaselineShape)) * cellSize;
+        var areaRatio = so.GetTileSO(BaselineShape).areaRatio;
+        var s = Mathf.Sqrt(areaRatio) * cellSize;
         textSize = s * so.textSize;
-        cellColorList = so.GeneratePerceptualHueCycleColors(ShapeNum);
+        cellColorList = ColorGenerator.GeneratePerceptualHueCycleColors(so, ShapeNum);
 
         float camDistance = Mathf.Abs(cam.transform.position.z);
 

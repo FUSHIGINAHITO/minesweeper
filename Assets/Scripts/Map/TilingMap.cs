@@ -115,8 +115,8 @@ public abstract partial class TilingMap : Map
             return c.cachedWorldVertices;
         }
 
-        var local = PoolManager.instance.GetSharedLocalVertices(c.shapeType);
-        int count = local.Count;
+        var local = c.so.localVertices;
+        int count = local.Length;
 
         var worldVerts = c.cachedWorldVertices;
         if (worldVerts == null || worldVerts.Length != count)

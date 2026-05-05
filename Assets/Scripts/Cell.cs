@@ -76,23 +76,15 @@ public class Cell : CellPool.PoolObj
         }
     }
 
-    public void Reveal()
+    public void Reveal(bool force = false)
     {
-        if (!isRevealed)
+        if (!isRevealed || force)
         {
             isRevealed = true;
             image.color = isMine ? so.mineColor : so.revealedColor;
 
             ShowRevealArt(true);
-
-            if (!isMine && value > 0)
-            {
-                text = PoolManager.instance.textPool.Require();
-                text.transform.SetPositionAndRotation(trans.position, Quaternion.identity);
-                text.transform.localScale = Game.instance.map.textSize * Vector3.one;
-                text.text.text = value.ToString();
-                text.text.color = so.colors[Mathf.Clamp(value, 0, so.colors.Length - 1)];
-            }
+            ShowText();
         }
     }
 
@@ -195,12 +187,34 @@ public class Cell : CellPool.PoolObj
         ReturnText();
     }
 
+    public void ShowAns()
+    {
+        image.color = isMine ? so.mineColor : so.revealedColor;
+        Reveal(true);
+    }
+
     private void ReturnText()
     {
         if (text is not null)
         {
             text.Return();
             text = null;
+        }
+    }
+
+    private void ShowText()
+    {
+        if (!isMine && value > 0)
+        {
+            if (text is null)
+            {
+                text = PoolManager.instance.textPool.Require();
+            }
+
+            text.transform.SetPositionAndRotation(trans.position, Quaternion.identity);
+            text.transform.localScale = Game.instance.map.textSize * Vector3.one;
+            text.text.text = value.ToString();
+            text.text.color = so.colors[Mathf.Clamp(value, 0, so.colors.Length - 1)];
         }
     }
 }

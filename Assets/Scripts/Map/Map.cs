@@ -208,4 +208,12 @@ public abstract class Map : MonoBehaviour
             cell.ShowColor();
         }
     }
+
+    public void Cheat()
+    {
+        foreach (var cell in cellList)
+        {
+            cell.ShowAns();
+        }
+    }
 }

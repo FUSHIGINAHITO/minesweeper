@@ -66,6 +66,13 @@ public class Game : MonoBehaviour
             return;
         }
 
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            GameOver();
+            map.Cheat();
+            return;
+        }
+
         if (gameOver)
         {
             return;

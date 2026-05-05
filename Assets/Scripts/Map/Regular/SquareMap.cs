@@ -1,7 +1,7 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// °ØÀ­Í¼ÃÜÆÌ 4.4.4.4
+/// æŸæ‹‰å›¾å¯†é“º 4.4.4.4
 /// </summary>
 public class SquareMap : PeriodicMotifMap
 {

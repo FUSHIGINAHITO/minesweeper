@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using UnityEngine;
 
 public class ColorValidationRunner : MonoBehaviour
@@ -12,7 +12,7 @@ public class ColorValidationRunner : MonoBehaviour
     {
         if (data == null)
         {
-            Debug.LogError("MainDataSO δ�󶨡�");
+            Debug.LogError("MainDataSO 未绑定。");
             return;
         }
 
@@ -52,7 +52,7 @@ public class ColorValidationRunner : MonoBehaviour
         sb.AppendLine($"Count: {colors.Length}, Seed: {randomSeed}");
         sb.AppendLine($"OutOfGamut: {outOfGamutCount}");
         sb.AppendLine($"OKLab L mean/std: {lMean:F6} / {lStd:F6}");
-        sb.AppendLine($"Adjacent ��E(ok) mean/std: {deMean:F6} / {deStd:F6}");
+        sb.AppendLine($"Adjacent ΔE(ok) mean/std: {deMean:F6} / {deStd:F6}");
         sb.AppendLine("Colors(HEX RGBA):");
 
         for (int i = 0; i < colors.Length; i++)

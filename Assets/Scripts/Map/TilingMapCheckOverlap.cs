@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -76,7 +76,7 @@ public abstract partial class TilingMap : Map
                         if (overlapCount <= maxDetailedReport)
                         {
                             Debug.LogError(
-                                $"[Map] ¼ì²âµ½ Cell ÖØµş: #{oi} ({other.position.x:F4}, {other.position.y:F4}) <-> #{i} ({c.position.x:F4}, {c.position.y:F4})",
+                                $"[Map] æ£€æµ‹åˆ° Cell é‡å : #{oi} ({other.position.x:F4}, {other.position.y:F4}) <-> #{i} ({c.position.x:F4}, {c.position.y:F4})",
                                 this);
                         }
                     }
@@ -90,10 +90,10 @@ public abstract partial class TilingMap : Map
         {
             if (overlapCount > maxDetailedReport)
             {
-                Debug.LogError($"[Map] ÆäÓà {overlapCount - maxDetailedReport} ¶ÔÖØµşÒÑÊ¡ÂÔÊä³ö¡£", this);
+                Debug.LogError($"[Map] å…¶ä½™ {overlapCount - maxDetailedReport} å¯¹é‡å å·²çœç•¥è¾“å‡ºã€‚", this);
             }
 
-            Debug.LogError($"[Map] Cell ÖØµş¼ì²âÊ§°Ü£¬¹²·¢ÏÖ {overlapCount} ¶ÔÖØµş¡£", this);
+            Debug.LogError($"[Map] Cell é‡å æ£€æµ‹å¤±è´¥ï¼Œå…±å‘ç° {overlapCount} å¯¹é‡å ã€‚", this);
         }
 
         ClearAndRecycle(pickBuckets);
@@ -153,7 +153,7 @@ public abstract partial class TilingMap : Map
             Project(axisSource, nx, ny, out float minA, out float maxA);
             Project(target, nx, ny, out float minB, out float maxB);
 
-            // Ğ¡ÓÚµÈÓÚÈİ²îµÄ¡°ÖØµş¡±°´²»ÖØµş´¦Àí£¨Èİ´í£©
+            // å°äºç­‰äºå®¹å·®çš„â€œé‡å â€æŒ‰ä¸é‡å å¤„ç†ï¼ˆå®¹é”™ï¼‰
             if (maxA <= minB + overlapTolerance || maxB <= minA + overlapTolerance)
             {
                 return true;

@@ -1,7 +1,7 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// °¢»ùÃ×µÂÃÜÆÌ 4.8.8
+/// é˜¿åŸºç±³å¾·å¯†é“º 4.8.8
 /// </summary>
 public class Tile488Map : PeriodicMotifMap
 {
@@ -11,7 +11,7 @@ public class Tile488Map : PeriodicMotifMap
     protected override void BuildPattern(float s, out Vector2 b1, out Vector2 b2, out MotifCell[] motif)
     {
         float r8 = s / (2f * Mathf.Tan(Mathf.PI / 8f));
-        float L = 2f * r8 + s; // ÏàÁÚ°Ë±ßĞÎÖĞĞÄ¼ä¾à = (2 + sqrt(2)) * s
+        float L = 2f * r8 + s; // ç›¸é‚»å…«è¾¹å½¢ä¸­å¿ƒé—´è· = (2 + sqrt(2)) * s
 
         b1 = new Vector2(L, 0f);
         b2 = new Vector2(0f, L);

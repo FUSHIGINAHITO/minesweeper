@@ -1,4 +1,4 @@
-public enum CellShapeType
+﻿public enum CellShapeType
 {
     Triangle = 0,
     Square = 1,

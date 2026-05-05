@@ -1,7 +1,7 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// °¢»ùÃ×µÂÃÜÆÌ 3.6.3.6
+/// é˜¿åŸºç±³å¾·å¯†é“º 3.6.3.6
 /// </summary>
 public class Tile3636Map : PeriodicMotifMap
 {
@@ -24,7 +24,7 @@ public class Tile3636Map : PeriodicMotifMap
         {
             new MotifCell(CellShapeType.Hex, Vector2.zero, 0f, 0),
 
-            // triangle normals: 90¡ã, 30¡ã
+            // triangle normals: 90Â°, 30Â°
             new MotifCell(CellShapeType.Triangle, new Vector2(0f, dEdge), 0f, 1),
             new MotifCell(CellShapeType.Triangle, new Vector2(D * 0.5f, dEdge * 0.5f), -60f, 1)
         };

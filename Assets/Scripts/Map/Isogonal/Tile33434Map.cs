@@ -1,7 +1,7 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// °¢»ùÃ×µÂÃÜÆÌ 3.3.4.3.4
+/// é˜¿åŸºç±³å¾·å¯†é“º 3.3.4.3.4
 /// </summary>
 public class Tile33434Map : PeriodicMotifMap
 {

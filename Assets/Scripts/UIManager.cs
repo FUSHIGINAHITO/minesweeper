@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,11 +7,10 @@ public class UIManager : MonoBehaviour
     public static UIManager instance => _instance;
     private static UIManager _instance;
 
-    // UI Ԫ��
+    // UI 元素
     public Camera mainCamera;
     public TMP_Text restMine;
     public TMP_Text timer;
-    public Image faceImage;
 
     private int _lastRestMine = int.MinValue;
     private int _lastTimer = int.MinValue;
@@ -36,28 +35,16 @@ public class UIManager : MonoBehaviour
             _lastTimer = currentTimer;
             timer.text = currentTimer.ToString();
         }
-
-        if (!Game.instance.gameOver)
-        {
-            if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
-            {
-                faceImage.sprite = Game.instance.so.holdSprite;
-            }
-            else
-            {
-                faceImage.sprite = Game.instance.so.normalSprite;
-            }
-        }
     }
 
     public void Victory()
     {
-        faceImage.sprite = Game.instance.so.victorySprite;
+
     }
 
     public void Defeat()
     {
-        faceImage.sprite = Game.instance.so.defeatSprite;
+
     }
 
     public void GameStart()

@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Custom_RegularPolygonButtonWorldLit
+  m_Name: Border
   m_Shader: {fileID: 4800000, guid: e07c14b7ab8b7d14ba2325116a1b7bd5, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -36,14 +36,14 @@ Material:
     - _AngleOffset: 0
     - _BevelWidth: 0.207
     - _BevelWidthUV: 0.06
-    - _BottomDark: 0.3
+    - _BottomDark: 0.05
     - _EdgeSoftness: 0.031
     - _Radius: 1
     - _RimDark: 0.3
-    - _RimLight: 0.5
+    - _RimLight: 0.3
     - _SDFPxRange: 8
     - _Sides: 12
-    - _TopBright: 0.2
+    - _TopBright: 0.05
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}

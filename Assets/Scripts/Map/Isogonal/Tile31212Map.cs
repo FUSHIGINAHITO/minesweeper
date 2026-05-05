@@ -1,8 +1,8 @@
-using System.Collections.Generic;
+锘縰sing System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 阿基米德密铺 3.12.12
+/// 闃垮熀绫冲痉瀵嗛摵 3.12.12
 /// </summary>
 public class Tile31212Map : PeriodicMotifMap
 {
@@ -14,9 +14,9 @@ public class Tile31212Map : PeriodicMotifMap
         float r12 = s / (2f * Mathf.Tan(Mathf.PI / 12f));
         float rTri = s * Mathf.Sqrt(3f) / 6f;
 
-        // 十二边形中心构成三角晶格，最近中心距
+        // 鍗佷簩杈瑰舰涓績鏋勬垚涓夎鏅舵牸锛屾渶杩戜腑蹇冭窛
         float D = r12 * 2f;
-        // 三角形位于三个十二边形之间（角方向）
+        // 涓夎褰綅浜庝笁涓崄浜岃竟褰箣闂达紙瑙掓柟鍚戯級
         float dCorner = r12 + rTri;
 
         b1 = new Vector2(D, 0f);

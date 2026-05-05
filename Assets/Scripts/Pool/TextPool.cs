@@ -1,4 +1,4 @@
-public class TextPool : Pool<TextHandler>
+﻿public class TextPool : Pool<TextHandler>
 {
     protected override void OnRequire(TextHandler item)
     {

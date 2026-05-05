@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "MainDataSO", menuName = "Minesweeper/MainData", order = 0)]
@@ -8,17 +8,15 @@ public class MainDataSO : ScriptableObject
     public List<Texture> polygonSDFTextures = new();
     public List<Sprite> polygonShrinkSprites = new();
     public Material polygonBaseMaterial;
+    public Material polygonBorderMaterial;
     public Material polygonRevealedMaterial;
 
-    [Header("ÆÁÄ»±ßÔµÁô°×£¨°Ù·Ö±È£©")]
-    public float marginLeftPercent = 0.01f;
-    public float marginRightPercent = 0.01f;
+    [Header("å±å¹•è¾¹ç¼˜ç•™ç™½ï¼ˆç»Ÿä¸€åšåº¦ç™¾åˆ†æ¯”ï¼ŒåŸºäºå±å¹•é«˜åº¦ï¼‰")]
     public float marginTopPercent = 0.05f;
-    public float marginBottomPercent = 0.01f;
 
     public Color[] colors;
 
-    [Header("¸ñ×ÓÑÕÉ«ÅäÖÃ")]
+    [Header("æ ¼å­é¢œè‰²é…ç½®")]
     public Color borderColor;
     public Color defaultColor;
     public Color pressedColor;
@@ -31,19 +29,13 @@ public class MainDataSO : ScriptableObject
     public Color bombMineColor;
     public Color wrongFlagColor;
 
-    [Header("¸ñ×ÓÌùÍ¼")]
-    public Sprite normalSprite;
-    public Sprite holdSprite;
-    public Sprite victorySprite;
-    public Sprite defeatSprite;
-
-    [Header("½çÃæ±³¾°É«")]
+    [Header("ç•Œé¢èƒŒæ™¯è‰²")]
     public Color normalBgColor;
 
     public float textSize;
     public float bevelSize;
 
-    [Header("³ÌĞò»¯Á¬ĞøÅäÉ«(OKLCH)")]
+    [Header("ç¨‹åºåŒ–è¿ç»­é…è‰²(OKLCH)")]
     [Range(0f, 1f)] public float lightness = 0.72f;
     [Range(0f, 1f)] public float chroma = 0.16f;
     [Range(0f, 1f)] public float alpha = 1f;
@@ -74,7 +66,7 @@ public class MainDataSO : ScriptableObject
 
     private static Color OklchToSrgbWithGamutFit(float l, float c, float h01, float alpha)
     {
-        // ¶ş·ÖÊÕËõ chroma£¬¾¡Á¿±£³ÖÉ«Ïà£¬Í¬Ê±±£Ö¤ÔÚ sRGB É«ÓòÄÚ
+        // äºŒåˆ†æ”¶ç¼© chromaï¼Œå°½é‡ä¿æŒè‰²ç›¸ï¼ŒåŒæ—¶ä¿è¯åœ¨ sRGB è‰²åŸŸå†…
         float lo = 0f;
         float hi = Mathf.Max(0f, c);
 

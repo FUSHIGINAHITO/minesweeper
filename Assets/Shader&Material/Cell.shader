@@ -1,4 +1,4 @@
-Shader "Custom/SpritePolygonButtonLikeWorldFixed"
+ï»¿Shader "Custom/SpritePolygonButtonLikeWorldFixed"
 {
     Properties
     {
@@ -120,7 +120,7 @@ Shader "Custom/SpritePolygonButtonLikeWorldFixed"
                 fixed3 bottomColor = lerp(baseColor, fixed3(0,0,0), _BottomDark);
                 fixed3 c = lerp(bottomColor, topColor, vertical01);
 
-                // bevel = Ô­ĞÎ×´ - ËõĞ¡ºóµÄĞÎ×´£¨»ùÓÚ SDF£©
+                // bevel = åŸå½¢çŠ¶ - ç¼©å°åçš„å½¢çŠ¶ï¼ˆåŸºäº SDFï¼‰
                 float soft = max(_EdgeSoftness * 0.25, 1e-4);
 
                 float sdfOuter = tex2D(_SDFTex, i.uvSdf).r;

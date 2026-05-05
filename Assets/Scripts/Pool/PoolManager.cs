@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 public class PoolManager : MonoBehaviour
@@ -13,9 +13,11 @@ public class PoolManager : MonoBehaviour
 
     private readonly List<Vector2[]> sharedLocalVertices = new();
     private readonly List<float> sharedInradiusRatios = new();
+    private readonly List<float> sharedAreaRatios = new();
     private readonly List<Material> sharedPolygonMaterials = new();
+    private readonly List<Material> sharedPolygonBorderMaterials = new();
 
-    private const int ShapeCount = 10; // 3~12 ±ßÐÎ
+    private const int ShapeCount = 10; // 3~12 è¾¹å½¢
     private static readonly int SdfTexId = Shader.PropertyToID("_SDFTex");
     private static readonly int BevelWidthId = Shader.PropertyToID("_BevelWidth");
 
@@ -24,6 +26,7 @@ public class PoolManager : MonoBehaviour
         _instance = this;
         BuildSharedLocalVertices();
         BuildSharedInradiusRatios();
+        BuildSharedAreaRatios();
         BuildSharedPolygonMaterials();
     }
 
@@ -35,6 +38,13 @@ public class PoolManager : MonoBehaviour
         }
 
         sharedPolygonMaterials.Clear();
+
+        for (int i = 0; i < sharedPolygonBorderMaterials.Count; i++)
+        {
+            Destroy(sharedPolygonBorderMaterials[i]);
+        }
+
+        sharedPolygonBorderMaterials.Clear();
     }
 
     public Cell RequireCell(CellShapeType cellShapeType, Vector3 pos, Quaternion rot, float scale, bool isBorder = false, int typeId = -1)
@@ -54,9 +64,19 @@ public class PoolManager : MonoBehaviour
         return sharedInradiusRatios[(int)shapeType];
     }
 
+    public float GetSharedAreaRatio(CellShapeType shapeType)
+    {
+        return sharedAreaRatios[(int)shapeType];
+    }
+
     public Material GetSharedPolygonMaterial(CellShapeType shapeType)
     {
         return sharedPolygonMaterials[(int)shapeType];
+    }
+
+    public Material GetSharedPolygonBorderMaterial(CellShapeType shapeType)
+    {
+        return sharedPolygonBorderMaterials[(int)shapeType];
     }
 
     private void BuildSharedLocalVertices()
@@ -82,9 +102,23 @@ public class PoolManager : MonoBehaviour
         }
     }
 
+    private void BuildSharedAreaRatios()
+    {
+        sharedAreaRatios.Clear();
+
+        float baseArea = BuildRegularPolygonArea(3, 1f);
+
+        for (int n = 3; n <= 12; n++)
+        {
+            float area = BuildRegularPolygonArea(n, 1f);
+            sharedAreaRatios.Add(area / baseArea);
+        }
+    }
+
     private void BuildSharedPolygonMaterials()
     {
         sharedPolygonMaterials.Clear();
+        sharedPolygonBorderMaterials.Clear();
 
         for (int i = 0; i < ShapeCount; i++)
         {
@@ -96,6 +130,15 @@ public class PoolManager : MonoBehaviour
             mat.SetTexture(SdfTexId, mainDataSO.polygonSDFTextures[i]);
             mat.SetFloat(BevelWidthId, mainDataSO.bevelSize / sharedInradiusRatios[i]);
             sharedPolygonMaterials.Add(mat);
+
+            Material borderMat = new Material(mainDataSO.polygonBorderMaterial)
+            {
+                name = $"{mainDataSO.polygonBorderMaterial.name}_Shape_{i + 3}"
+            };
+
+            borderMat.SetTexture(SdfTexId, mainDataSO.polygonSDFTextures[i]);
+            borderMat.SetFloat(BevelWidthId, mainDataSO.bevelSize / sharedInradiusRatios[i]);
+            sharedPolygonBorderMaterials.Add(borderMat);
         }
     }
 
@@ -119,5 +162,10 @@ public class PoolManager : MonoBehaviour
     private static float BuildRegularPolygonInradius(int n, float size)
     {
         return size / (2f * Mathf.Tan(Mathf.PI / n));
+    }
+
+    private static float BuildRegularPolygonArea(int n, float size)
+    {
+        return n * size * size / (4f * Mathf.Tan(Mathf.PI / n));
     }
 }

@@ -53,7 +53,7 @@ public partial class PolygonPlacer : MonoBehaviour
 
     [Header("Periodic Motif Export")]
     [SerializeField] private string exportMotifId = "NewMotif";
-    [SerializeField] private string exportAssetFolder = "Assets/SO/PeriodicMotifs";
+    [SerializeField] private string exportAssetFolder = "Assets/Generated/PeriodicMotifs";
     [SerializeField, Min(0.0001f)] private float detectMinTranslationLength = 0.2f;
     [SerializeField, Range(0.5f, 1f)] private float detectScoreThreshold = 0.98f;
 
@@ -81,6 +81,9 @@ public partial class PolygonPlacer : MonoBehaviour
     private Vector2[] gizmoOverlapHandPolygon;
     private Vector2[] gizmoOverlapPlacedPolygon;
 
+    // Enter 成功回铺后锁定编辑，仅 Backspace 可重置
+    private bool placementLocked;
+
     private void Start()
     {
         nextPlacedOrder = placedOrderStart;
@@ -94,9 +97,24 @@ public partial class PolygonPlacer : MonoBehaviour
             ClearPlacedTiles();
         }
 
+        // Enter: 判定 + 直接回铺（不导出）
         if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
         {
-            TryDetectAndExportPeriodicMotif();
+            if (!placementLocked)
+            {
+                TryDetectAndRebuildTiling();
+            }
+        }
+
+        // P: 仅导出 SO
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            TryDetectAndExportOnly();
+        }
+
+        if (placementLocked)
+        {
+            return;
         }
 
         if (Input.GetKeyDown(KeyCode.Escape))
@@ -158,6 +176,11 @@ public partial class PolygonPlacer : MonoBehaviour
 
     public void SelectTileByIndex(int index)
     {
+        if (placementLocked)
+        {
+            return;
+        }
+
         currentTileIndex = index;
         heldRotationDeg = 0f;
         snappedRotationDeg = 0f;
@@ -304,7 +327,7 @@ public partial class PolygonPlacer : MonoBehaviour
                 out Vector2 pos,
                 out float rotDeg))
         {
-            // 保持 heldRotationDeg 不变，确保“手上用于吸附判定”的多边形朝向恒定
+            heldRotationDeg = rotDeg;
             snappedRotationDeg = rotDeg;
             snappedPos = new Vector3(pos.x, pos.y, placementZ);
 
@@ -324,7 +347,7 @@ public partial class PolygonPlacer : MonoBehaviour
 
     private void PlaceCurrent()
     {
-        if (!hasSnapSolution || !previewCanPlace || currentTileIndex < 0)
+        if (placementLocked || !hasSnapSolution || !previewCanPlace || currentTileIndex < 0)
         {
             return;
         }
@@ -383,12 +406,14 @@ public partial class PolygonPlacer : MonoBehaviour
         previewCanPlace = true;
     }
 
-    private void TryDetectAndExportPeriodicMotif()
+    private bool TryDetectCurrent(out PeriodicMotifDetector.DetectionResult detectResult)
     {
+        detectResult = default;
+
         if (boundaryTracker.PlacedTileCount < 1)
         {
             Debug.LogWarning("[PolygonPlacer] 场上没有单元，无法判定密铺。");
-            return;
+            return false;
         }
 
         List<PlacedTileData> snapshot = boundaryTracker.GetPlacedTilesSnapshot();
@@ -401,62 +426,76 @@ public partial class PolygonPlacer : MonoBehaviour
                 rotationQuantizeScale,
                 detectMinTranslationLength,
                 detectScoreThreshold,
-                out PeriodicMotifDetector.DetectionResult detectResult,
+                out detectResult,
                 out string reason))
         {
-            Debug.LogWarning($"[PolygonPlacer] 密铺判定失败：{reason}");
+            string code = "UNKNOWN";
+            string message = reason;
+
+            int sep = reason.IndexOf('|');
+            if (sep > 0 && sep < reason.Length - 1)
+            {
+                code = reason.Substring(0, sep);
+                message = reason.Substring(sep + 1);
+            }
+
+            Debug.LogWarning($"[PolygonPlacer][{code}] 密铺判定失败：{message}");
+            return false;
+        }
+
+        return true;
+    }
+
+    // Enter: 判定 + 回铺，不导出
+    private void TryDetectAndRebuildTiling()
+    {
+        if (!TryDetectCurrent(out PeriodicMotifDetector.DetectionResult detectResult))
+        {
             return;
         }
 
-#if UNITY_EDITOR
-        if (!TryCreatePeriodicMotifAsset(detectResult, out string assetPath, out string error))
+        PeriodicMotifSO motifSo = BuildMotifSO(detectResult);
+
+        if (!TryRebuildScreenTilingFromMotif(motifSo, out string fillError))
         {
+            Destroy(motifSo);
+            Debug.LogError($"[PolygonPlacer] 回铺失败：{fillError}");
+            return;
+        }
+
+        Destroy(motifSo);
+        placementLocked = true;
+        CancelHolding();
+        Debug.Log("[PolygonPlacer] 判定成功，已完成屏幕范围回铺，编辑已锁定。按 Backspace 可重置。");
+    }
+
+    // P: 仅导出 SO
+    private void TryDetectAndExportOnly()
+    {
+        if (!TryDetectCurrent(out PeriodicMotifDetector.DetectionResult detectResult))
+        {
+            return;
+        }
+
+        PeriodicMotifSO motifSo = BuildMotifSO(detectResult);
+
+#if UNITY_EDITOR
+        if (!TryCreatePeriodicMotifAsset(motifSo, out string assetPath, out string error))
+        {
+            Destroy(motifSo);
             Debug.LogError($"[PolygonPlacer] 导出失败：{error}");
             return;
         }
 
         Debug.Log($"[PolygonPlacer] 导出成功：{assetPath}");
 #else
+        Destroy(motifSo);
         Debug.LogWarning("[PolygonPlacer] 当前不在 UnityEditor，无法导出 Asset。");
 #endif
     }
 
-    private void ClearPlacedTiles()
+    private PeriodicMotifSO BuildMotifSO(PeriodicMotifDetector.DetectionResult detectResult)
     {
-        view.ClearPlaced();
-        boundaryTracker.Clear();
-
-        nextPlacedOrder = placedOrderStart;
-        selectedSnapEdgeIndex = -1;
-        hasActiveBoundaryEdge = false;
-        hasSnapSolution = false;
-        previewCanPlace = false;
-        isSnapLatched = false;
-        ClearOverlapGizmoState();
-
-        if (currentTileIndex >= 0 && view.HasPreview)
-        {
-            view.SetPreviewVisual(true, previewAlpha, previewValidColor, previewInvalidColor);
-        }
-    }
-
-#if UNITY_EDITOR
-    private bool TryCreatePeriodicMotifAsset(
-        PeriodicMotifDetector.DetectionResult detectResult,
-        out string assetPath,
-        out string error)
-    {
-        assetPath = string.Empty;
-        error = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(exportAssetFolder) || !exportAssetFolder.StartsWith("Assets"))
-        {
-            error = "exportAssetFolder 必须是 Assets 下路径。";
-            return false;
-        }
-
-        EnsureFolder(exportAssetFolder);
-
         string motifId = string.IsNullOrWhiteSpace(exportMotifId)
             ? $"Motif_{System.DateTime.Now:yyyyMMdd_HHmmss}"
             : exportMotifId.Trim();
@@ -487,8 +526,350 @@ public partial class PolygonPlacer : MonoBehaviour
         }
 
         so.cells = cells;
+        return so;
+    }
 
-        string safeName = SanitizeFileName(motifId);
+    private bool TryRebuildScreenTilingFromMotif(PeriodicMotifSO motifSo, out string reason)
+    {
+        reason = string.Empty;
+
+        if (motifSo == null || motifSo.cells == null || motifSo.cells.Length == 0)
+        {
+            reason = "motif 数据为空。";
+            return false;
+        }
+
+        if (!TryGetScreenRectOnPlacementPlane(out Rect screenRect))
+        {
+            reason = "无法计算屏幕范围。";
+            return false;
+        }
+
+        Vector2 b1 = motifSo.basis1Unit * cellScale;
+        Vector2 b2 = motifSo.basis2Unit * cellScale;
+        float det = b1.x * b2.y - b1.y * b2.x;
+        if (Mathf.Abs(det) < 1e-10f)
+        {
+            reason = "基向量退化（共线）。";
+            return false;
+        }
+
+        var shapeToTile = new Dictionary<CellShapeType, (int index, TileSO tile)>();
+        for (int i = 0; i < mainDataSO.tiles.Count; i++)
+        {
+            TileSO t = mainDataSO.tiles[i];
+            if (t != null && !shapeToTile.ContainsKey(t.shapeType))
+            {
+                shapeToTile.Add(t.shapeType, (i, t));
+            }
+        }
+
+        for (int i = 0; i < motifSo.cells.Length; i++)
+        {
+            if (!shapeToTile.ContainsKey(motifSo.cells[i].shapeType))
+            {
+                reason = $"缺少 shapeType={motifSo.cells[i].shapeType} 对应 TileSO。";
+                return false;
+            }
+        }
+
+        view.ClearPlaced();
+        boundaryTracker.Clear();
+        nextPlacedOrder = placedOrderStart;
+        ClearOverlapGizmoState();
+
+        Vector2 origin = new(
+            (screenRect.xMin + screenRect.xMax) * 0.5f,
+            (screenRect.yMin + screenRect.yMax) * 0.5f);
+
+        origin = QuantizeVec2(origin, positionQuantizeScale);
+
+        Vector2[] corners =
+        {
+            new Vector2(screenRect.xMin, screenRect.yMin),
+            new Vector2(screenRect.xMin, screenRect.yMax),
+            new Vector2(screenRect.xMax, screenRect.yMin),
+            new Vector2(screenRect.xMax, screenRect.yMax)
+        };
+
+        float minI = float.PositiveInfinity;
+        float maxI = float.NegativeInfinity;
+        float minJ = float.PositiveInfinity;
+        float maxJ = float.NegativeInfinity;
+
+        for (int k = 0; k < corners.Length; k++)
+        {
+            Vector2 d = corners[k] - origin;
+            float i = (d.x * b2.y - d.y * b2.x) / det;
+            float j = (-d.x * b1.y + d.y * b1.x) / det;
+
+            if (i < minI)
+                minI = i;
+            if (i > maxI)
+                maxI = i;
+            if (j < minJ)
+                minJ = j;
+            if (j > maxJ)
+                maxJ = j;
+        }
+
+        const int latticePadding = 3;
+        int iMin = Mathf.FloorToInt(minI) - latticePadding;
+        int iMax = Mathf.CeilToInt(maxI) + latticePadding;
+        int jMin = Mathf.FloorToInt(minJ) - latticePadding;
+        int jMax = Mathf.CeilToInt(maxJ) + latticePadding;
+
+        var placedKeys = new HashSet<(long x, long y, CellShapeType shape, int rotKey)>();
+
+        for (int j = jMin; j <= jMax; j++)
+        {
+            for (int i = iMin; i <= iMax; i++)
+            {
+                Vector2 latticeBase = origin + i * b1 + j * b2;
+
+                for (int m = 0; m < motifSo.cells.Length; m++)
+                {
+                    MotifCellData mc = motifSo.cells[m];
+                    (int tileIndex, TileSO tile) = shapeToTile[mc.shapeType];
+
+                    Vector2 center = latticeBase + mc.localCenterUnit * cellScale;
+                    center = QuantizeVec2(center, motifSo.positionQuantizeScale);
+
+                    float rot = QuantizeFloat(mc.localRotationDeg, motifSo.rotationQuantizeScale);
+
+                    long qx = (long)Mathf.Round(center.x * motifSo.positionQuantizeScale);
+                    long qy = (long)Mathf.Round(center.y * motifSo.positionQuantizeScale);
+                    int qr = Mathf.RoundToInt(rot * motifSo.rotationQuantizeScale);
+                    var key = (qx, qy, mc.shapeType, qr);
+
+                    if (placedKeys.Contains(key))
+                    {
+                        continue;
+                    }
+
+                    Vector2[] verts = BuildWorldVertices(tile, center, rot, cellScale);
+                    if (!PolygonIntersectsRect(verts, screenRect))
+                    {
+                        continue;
+                    }
+
+                    Vector3 pos3 = new(center.x, center.y, placementZ);
+                    view.AddPlaced(tile, pos3, rot, cellScale, placedRoot, nextPlacedOrder);
+                    nextPlacedOrder++;
+
+                    boundaryTracker.AddPlacedTile(tileIndex, center, rot);
+                    placedKeys.Add(key);
+                }
+            }
+        }
+
+        if (boundaryTracker.PlacedTileCount == 0)
+        {
+            reason = "回铺后未生成任何单元。";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static Vector2[] BuildWorldVertices(TileSO tile, Vector2 pos, float rotDeg, float scale)
+    {
+        Vector2[] src = tile.localVertices;
+        int n = src.Length;
+        Vector2[] dst = new Vector2[n];
+
+        for (int i = 0; i < n; i++)
+        {
+            Vector2 p = src[i] * scale;
+            dst[i] = PolygonSnapSolver.Rotate(p, rotDeg) + pos;
+        }
+
+        return dst;
+    }
+
+    private bool TryGetScreenRectOnPlacementPlane(out Rect rect)
+    {
+        rect = default;
+
+        if (!TryScreenPointToPlane(new Vector2(0f, 0f), out Vector2 bl)
+            || !TryScreenPointToPlane(new Vector2(0f, Screen.height), out Vector2 tl)
+            || !TryScreenPointToPlane(new Vector2(Screen.width, 0f), out Vector2 br)
+            || !TryScreenPointToPlane(new Vector2(Screen.width, Screen.height), out Vector2 tr))
+        {
+            return false;
+        }
+
+        float minX = Mathf.Min(bl.x, tl.x, br.x, tr.x);
+        float maxX = Mathf.Max(bl.x, tl.x, br.x, tr.x);
+        float minY = Mathf.Min(bl.y, tl.y, br.y, tr.y);
+        float maxY = Mathf.Max(bl.y, tl.y, br.y, tr.y);
+
+        rect = Rect.MinMaxRect(minX, minY, maxX, maxY);
+        return true;
+    }
+
+    private bool TryScreenPointToPlane(Vector2 screenPos, out Vector2 world2)
+    {
+        world2 = default;
+
+        Ray ray = worldCamera.ScreenPointToRay(screenPos);
+        Plane plane = new(Vector3.forward, new Vector3(0f, 0f, placementZ));
+        if (!plane.Raycast(ray, out float enter))
+        {
+            return false;
+        }
+
+        Vector3 p = ray.GetPoint(enter);
+        world2 = new Vector2(p.x, p.y);
+        return true;
+    }
+
+    private static bool PolygonIntersectsRect(Vector2[] verts, Rect rect)
+    {
+        for (int i = 0; i < verts.Length; i++)
+        {
+            if (rect.Contains(verts[i]))
+            {
+                return true;
+            }
+        }
+
+        Vector2 r0 = new(rect.xMin, rect.yMin);
+        Vector2 r1 = new(rect.xMin, rect.yMax);
+        Vector2 r2 = new(rect.xMax, rect.yMax);
+        Vector2 r3 = new(rect.xMax, rect.yMin);
+
+        if (IsPointInPolygon(r0, verts)
+            || IsPointInPolygon(r1, verts)
+            || IsPointInPolygon(r2, verts)
+            || IsPointInPolygon(r3, verts))
+        {
+            return true;
+        }
+
+        Vector2[] rectCorners = { r0, r1, r2, r3 };
+        for (int i = 0; i < verts.Length; i++)
+        {
+            Vector2 a = verts[i];
+            Vector2 b = verts[(i + 1) % verts.Length];
+
+            for (int e = 0; e < 4; e++)
+            {
+                Vector2 c = rectCorners[e];
+                Vector2 d = rectCorners[(e + 1) % 4];
+                if (SegmentsIntersect(a, b, c, d))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsPointInPolygon(Vector2 p, Vector2[] polygon)
+    {
+        bool inside = false;
+        int n = polygon.Length;
+
+        for (int i = 0, j = n - 1; i < n; j = i++)
+        {
+            Vector2 a = polygon[i];
+            Vector2 b = polygon[j];
+
+            bool intersect = ((a.y > p.y) != (b.y > p.y))
+                && (p.x < (b.x - a.x) * (p.y - a.y) / ((b.y - a.y) + 1e-12f) + a.x);
+
+            if (intersect)
+            {
+                inside = !inside;
+            }
+        }
+
+        return inside;
+    }
+
+    private static float Cross(Vector2 a, Vector2 b, Vector2 c)
+    {
+        return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+    }
+
+    private static bool OnSegment(Vector2 a, Vector2 b, Vector2 p)
+    {
+        const float eps = 1e-6f;
+        if (Mathf.Abs(Cross(a, b, p)) > eps)
+        {
+            return false;
+        }
+
+        return p.x >= Mathf.Min(a.x, b.x) - eps && p.x <= Mathf.Max(a.x, b.x) + eps
+            && p.y >= Mathf.Min(a.y, b.y) - eps && p.y <= Mathf.Max(a.y, b.y) + eps;
+    }
+
+    private static bool SegmentsIntersect(Vector2 a1, Vector2 a2, Vector2 b1, Vector2 b2)
+    {
+        float c1 = Cross(a1, a2, b1);
+        float c2 = Cross(a1, a2, b2);
+        float c3 = Cross(b1, b2, a1);
+        float c4 = Cross(b1, b2, a2);
+
+        bool properIntersect = ((c1 > 0f && c2 < 0f) || (c1 < 0f && c2 > 0f))
+                            && ((c3 > 0f && c4 < 0f) || (c3 < 0f && c4 > 0f));
+        if (properIntersect)
+        {
+            return true;
+        }
+
+        return OnSegment(a1, a2, b1)
+            || OnSegment(a1, a2, b2)
+            || OnSegment(b1, b2, a1)
+            || OnSegment(b1, b2, a2);
+    }
+
+    private void ClearPlacedTiles()
+    {
+        view.ClearPlaced();
+        boundaryTracker.Clear();
+
+        nextPlacedOrder = placedOrderStart;
+        selectedSnapEdgeIndex = -1;
+        hasActiveBoundaryEdge = false;
+        hasSnapSolution = false;
+        previewCanPlace = false;
+        isSnapLatched = false;
+        placementLocked = false;
+        ClearOverlapGizmoState();
+
+        if (currentTileIndex >= 0 && view.HasPreview)
+        {
+            view.SetPreviewVisual(true, previewAlpha, previewValidColor, previewInvalidColor);
+        }
+    }
+
+#if UNITY_EDITOR
+    private bool TryCreatePeriodicMotifAsset(
+        PeriodicMotifSO so,
+        out string assetPath,
+        out string error)
+    {
+        assetPath = string.Empty;
+        error = string.Empty;
+
+        if (so == null)
+        {
+            error = "SO 为空。";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(exportAssetFolder) || !exportAssetFolder.StartsWith("Assets"))
+        {
+            error = "exportAssetFolder 必须是 Assets 下路径。";
+            return false;
+        }
+
+        EnsureFolder(exportAssetFolder);
+
+        string safeName = SanitizeFileName(so.motifId);
         string rawPath = $"{exportAssetFolder}/{safeName}.asset";
         string uniquePath = AssetDatabase.GenerateUniqueAssetPath(rawPath);
 

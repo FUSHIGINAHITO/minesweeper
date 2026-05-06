@@ -45,18 +45,6 @@ public sealed class PeriodicMotifDetector
         }
     }
 
-    private readonly struct Signature
-    {
-        public readonly CellShapeType shapeType;
-        public readonly int rotKey;
-
-        public Signature(CellShapeType shapeType, int rotKey)
-        {
-            this.shapeType = shapeType;
-            this.rotKey = rotKey;
-        }
-    }
-
     private readonly struct VectorKey
     {
         public readonly long x;
@@ -67,36 +55,163 @@ public sealed class PeriodicMotifDetector
             x = (long)Mathf.Round(v.x * q);
             y = (long)Mathf.Round(v.y * q);
         }
+
+        public override bool Equals(object obj)
+        {
+            return obj is VectorKey other && x == other.x && y == other.y;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hx = (int)(x ^ (x >> 32));
+                int hy = (int)(y ^ (y >> 32));
+                return (hx * 397) ^ hy;
+            }
+        }
     }
 
-    private readonly struct GlobalKey
+    private readonly struct PointKey
     {
         public readonly long x;
         public readonly long y;
-        public readonly int shape;
-        public readonly int rot;
 
-        public GlobalKey(long x, long y, int shape, int rot)
+        public PointKey(Vector2 p, float q)
         {
-            this.x = x;
-            this.y = y;
-            this.shape = shape;
-            this.rot = rot;
+            x = (long)Mathf.Round(p.x * q);
+            y = (long)Mathf.Round(p.y * q);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is PointKey other && x == other.x && y == other.y;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hx = (int)(x ^ (x >> 32));
+                int hy = (int)(y ^ (y >> 32));
+                return (hx * 397) ^ hy;
+            }
+        }
+    }
+
+    private readonly struct EdgeKeyUndirected
+    {
+        public readonly PointKey a;
+        public readonly PointKey b;
+
+        public EdgeKeyUndirected(PointKey p0, PointKey p1)
+        {
+            bool swap = p0.x > p1.x || (p0.x == p1.x && p0.y > p1.y);
+            if (swap)
+            {
+                a = p1;
+                b = p0;
+            }
+            else
+            {
+                a = p0;
+                b = p1;
+            }
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is EdgeKeyUndirected other && a.Equals(other.a) && b.Equals(other.b);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (a.GetHashCode() * 397) ^ b.GetHashCode();
+            }
         }
     }
 
     private struct CellRecord
     {
+        public int tileIndex;
         public CellShapeType shapeType;
         public Vector2 pos;
         public float rotDeg;
         public int rotKey;
+        public Vector2[] verts;
     }
 
-    private struct CandidateVector
+    private struct BoundaryEdge
     {
-        public Vector2 v;
-        public float score;
+        public Vector2 a;
+        public Vector2 b;
+    }
+
+    private struct EdgeCounter
+    {
+        public int count;
+        public Vector2 a;
+        public Vector2 b;
+    }
+
+    private struct VertexInstance
+    {
+        public PointKey key;
+        public float angle;
+    }
+
+    private sealed class DisjointSet
+    {
+        private readonly int[] parent;
+        private readonly byte[] rank;
+
+        public DisjointSet(int n)
+        {
+            parent = new int[n];
+            rank = new byte[n];
+
+            for (int i = 0; i < n; i++)
+            {
+                parent[i] = i;
+                rank[i] = 0;
+            }
+        }
+
+        public int Find(int x)
+        {
+            if (parent[x] != x)
+            {
+                parent[x] = Find(parent[x]);
+            }
+
+            return parent[x];
+        }
+
+        public void Union(int a, int b)
+        {
+            int ra = Find(a);
+            int rb = Find(b);
+            if (ra == rb)
+            {
+                return;
+            }
+
+            if (rank[ra] < rank[rb])
+            {
+                parent[ra] = rb;
+            }
+            else if (rank[ra] > rank[rb])
+            {
+                parent[rb] = ra;
+            }
+            else
+            {
+                parent[rb] = ra;
+                rank[ra]++;
+            }
+        }
     }
 
     public bool TryDetect(
@@ -110,172 +225,128 @@ public sealed class PeriodicMotifDetector
         out DetectionResult result,
         out string reason)
     {
+        _ = symmetryScoreThreshold;
+
         result = default;
         reason = string.Empty;
 
         if (placedTiles == null || placedTiles.Count < 1)
         {
-            reason = "场上没有样本。";
+            reason = "NO_SAMPLE|场上没有样本。";
             return false;
         }
 
         if (cellScale <= 0f)
         {
-            reason = "cellScale 必须 > 0。";
+            reason = "BAD_SCALE|cellScale 必须 > 0。";
             return false;
         }
 
-        var records = BuildRecords(placedTiles, mainDataSO, positionQuantizeScale, rotationQuantizeScale);
+        List<CellRecord> records = BuildRecords(
+            placedTiles,
+            mainDataSO,
+            cellScale,
+            positionQuantizeScale,
+            rotationQuantizeScale);
+
         if (records.Count < 1)
         {
-            reason = "有效单元不足。";
+            reason = "NO_VALID_CELL|有效单元不足。";
             return false;
         }
 
-        Rect bounds = BuildBounds(records);
-        Rect inner = ShrinkRect(bounds, Mathf.Max(cellScale, minTranslationLength) * 1.5f);
-        var index = BuildGlobalIndex(records, positionQuantizeScale);
-
-        Vector2 origin;
-        Vector2 b1;
-        Vector2 b2;
-        bool usedFallback = false;
-
-        List<CandidateVector> strictCandidates = BuildCandidateVectors(
-            records,
-            index,
-            inner,
-            bounds,
-            positionQuantizeScale,
-            minTranslationLength,
-            symmetryScoreThreshold);
-
-        if (strictCandidates.Count >= 2 && TrySelectBasis(strictCandidates, cellScale, out b1, out b2))
+        List<BoundaryEdge> boundary = BuildBoundaryEdges(records, positionQuantizeScale);
+        if (boundary.Count < 4 || (boundary.Count & 1) != 0)
         {
-            origin = records[0].pos;
-        }
-        else
-        {
-            // 放宽约束：不要求高分，只要能给出一个可行周期基
-            List<CandidateVector> looseCandidates = BuildCandidateVectors(
-                records,
-                index,
-                inner,
-                bounds,
-                positionQuantizeScale,
-                Mathf.Max(1e-4f, minTranslationLength * 0.25f),
-                0f);
-
-            if (looseCandidates.Count >= 2 && TrySelectBasis(looseCandidates, cellScale, out b1, out b2))
-            {
-                origin = records[0].pos;
-                usedFallback = true;
-            }
-            else if (!TryBuildAnyBasis(records, placedTiles, mainDataSO, cellScale, out origin, out b1, out b2))
-            {
-                reason = "未能构造可行基向量。";
-                return false;
-            }
-            else
-            {
-                usedFallback = true;
-            }
-        }
-
-        ReduceBasis(ref b1, ref b2);
-
-        List<DetectedCell> motif = BuildMotif(records, b1, b2, origin, positionQuantizeScale);
-        if (motif.Count == 0)
-        {
-            reason = "提取到的 motif 为空。";
+            reason = "NO_BOUNDARY|边界边数量不足或为奇数，无法构造严格边配对。";
             return false;
         }
 
-        float passThreshold = usedFallback ? 0.5f : symmetryScoreThreshold;
-        if (!ValidateRetiling(records, index, motif, origin, b1, b2, inner, positionQuantizeScale, passThreshold))
+        List<Vector2> candidates = BuildTranslationCandidates(boundary, positionQuantizeScale, minTranslationLength);
+        if (candidates.Count < 2)
         {
-            reason = "回铺验证未通过。";
+            reason = "NO_CANDIDATE|未找到可用的边界平移候选。";
             return false;
         }
 
-        ComputeShapeInfo(records, out CellShapeType baselineShape, out int shapeNum);
-        result = new DetectionResult(origin, b1, b2, motif, baselineShape, shapeNum);
-        return true;
-    }
+        Vector2 origin = records[0].pos;
+        float areaEps = Mathf.Max(1e-8f, 0.01f * cellScale * cellScale);
 
-    private static bool TryBuildAnyBasis(
-    List<CellRecord> records,
-    IReadOnlyList<PlacedTileData> placedTiles,
-    MainDataSO mainDataSO,
-    float cellScale,
-    out Vector2 origin,
-    out Vector2 b1,
-    out Vector2 b2)
-    {
-        origin = records[0].pos;
-        b1 = default;
-        b2 = default;
+        bool hasNonCollinearPair = false;
+        bool hasPairingPass = false;
+        bool hasAnglePass = false;
 
-        // 有至少两个中心点：用中心差构造一个平移，再取正交向量
-        if (records.Count >= 2)
+        for (int i = 0; i < candidates.Count; i++)
         {
-            float bestLen2 = 0f;
-            Vector2 best = default;
-
-            for (int i = 0; i < records.Count; i++)
+            for (int j = i + 1; j < candidates.Count; j++)
             {
-                for (int j = i + 1; j < records.Count; j++)
+                Vector2 b1 = candidates[i];
+                Vector2 b2 = candidates[j];
+                if (Mathf.Abs(Cross(b1, b2)) <= areaEps)
                 {
-                    Vector2 d = records[j].pos - records[i].pos;
-                    float l2 = d.sqrMagnitude;
-                    if (l2 > bestLen2)
-                    {
-                        bestLen2 = l2;
-                        best = d;
-                    }
+                    continue;
                 }
+
+                hasNonCollinearPair = true;
+                ReduceBasis(ref b1, ref b2);
+
+                if (!TryBuildBoundaryPairingStrict(boundary, b1, b2, positionQuantizeScale, out int[] pairMap))
+                {
+                    continue;
+                }
+
+                hasPairingPass = true;
+
+                if (!ValidateVertexAngleSumStrictUnionFind(records, boundary, pairMap, positionQuantizeScale))
+                {
+                    continue;
+                }
+
+                hasAnglePass = true;
+
+                List<DetectedCell> motif = BuildMotif(records, origin, b1, b2, positionQuantizeScale);
+                if (motif.Count == 0)
+                {
+                    continue;
+                }
+
+                ComputeShapeInfo(records, out CellShapeType baselineShape, out int shapeNum);
+                result = new DetectionResult(origin, b1, b2, motif, baselineShape, shapeNum);
+                return true;
             }
-
-            if (bestLen2 > 1e-8f)
-            {
-                b1 = best;
-                b2 = new Vector2(-best.y, best.x);
-                return b2.sqrMagnitude > 1e-8f;
-            }
         }
 
-        // 仅 1 个样本：按首个图形边长构造一个方形周期基（“任意可行解”兜底）
-        PlacedTileData p = placedTiles[0];
-        if (p.tileIndex < 0 || p.tileIndex >= mainDataSO.tiles.Count || mainDataSO.tiles[p.tileIndex] == null)
+        if (!hasNonCollinearPair)
         {
+            reason = "NO_BASIS|候选向量两两共线，无法形成二维晶格。";
             return false;
         }
 
-        TileSO tile = mainDataSO.tiles[p.tileIndex];
-        if (tile.localVertices == null || tile.localVertices.Length < 2)
+        if (!hasPairingPass)
         {
+            reason = "PAIRING_FAIL|边界边无法在晶格下严格一一反向配对。";
             return false;
         }
 
-        float edgeLen = (tile.localVertices[1] - tile.localVertices[0]).magnitude * cellScale;
-        if (edgeLen <= 1e-6f)
+        if (!hasAnglePass)
         {
+            reason = "ANGLE_FAIL|顶点角和不满足 2π，非二维流形。";
             return false;
         }
 
-        float rot = p.rotationDeg;
-        b1 = PolygonSnapSolver.Rotate(new Vector2(edgeLen, 0f), rot);
-        b2 = PolygonSnapSolver.Rotate(new Vector2(0f, edgeLen), rot);
-        return true;
+        reason = "UNKNOWN_FAIL|未找到满足条件的解。";
+        return false;
     }
 
     private static List<CellRecord> BuildRecords(
         IReadOnlyList<PlacedTileData> placedTiles,
         MainDataSO mainDataSO,
+        float cellScale,
         float posQ,
         float rotQ)
     {
         var list = new List<CellRecord>(placedTiles.Count);
+
         for (int i = 0; i < placedTiles.Count; i++)
         {
             PlacedTileData p = placedTiles[i];
@@ -285,200 +356,587 @@ public sealed class PeriodicMotifDetector
             }
 
             TileSO tile = mainDataSO.tiles[p.tileIndex];
-            if (tile == null)
+            if (tile == null || tile.localVertices == null || tile.localVertices.Length < 3)
             {
                 continue;
             }
 
             Vector2 qPos = QuantizeVec2(p.position, posQ);
             float qRot = QuantizeFloat(p.rotationDeg, rotQ);
-            int rotKey = Mathf.RoundToInt(qRot * rotQ);
+            Vector2[] verts = BuildWorldVertices(tile, qPos, qRot, cellScale);
 
             list.Add(new CellRecord
             {
+                tileIndex = p.tileIndex,
                 shapeType = tile.shapeType,
                 pos = qPos,
                 rotDeg = qRot,
-                rotKey = rotKey
+                rotKey = Mathf.RoundToInt(qRot * rotQ),
+                verts = verts
             });
         }
 
         return list;
     }
 
-    private static Dictionary<GlobalKey, byte> BuildGlobalIndex(List<CellRecord> records, float posQ)
+    private static List<BoundaryEdge> BuildBoundaryEdges(List<CellRecord> records, float posQ)
     {
-        var map = new Dictionary<GlobalKey, byte>(records.Count * 2);
+        var map = new Dictionary<EdgeKeyUndirected, EdgeCounter>();
+
         for (int i = 0; i < records.Count; i++)
         {
-            CellRecord r = records[i];
-            long qx = (long)Mathf.Round(r.pos.x * posQ);
-            long qy = (long)Mathf.Round(r.pos.y * posQ);
-            var key = new GlobalKey(qx, qy, (int)r.shapeType, r.rotKey);
-            if (!map.ContainsKey(key))
+            Vector2[] verts = records[i].verts;
+            int n = verts.Length;
+
+            for (int e = 0; e < n; e++)
             {
-                map.Add(key, 0);
-            }
-        }
+                Vector2 a = verts[e];
+                Vector2 b = verts[(e + 1) % n];
 
-        return map;
-    }
+                var key = new EdgeKeyUndirected(new PointKey(a, posQ), new PointKey(b, posQ));
 
-    private static List<CandidateVector> BuildCandidateVectors(
-        List<CellRecord> records,
-        Dictionary<GlobalKey, byte> index,
-        Rect inner,
-        Rect bounds,
-        float posQ,
-        float minLen,
-        float threshold)
-    {
-        var bySig = new Dictionary<Signature, List<int>>();
-        for (int i = 0; i < records.Count; i++)
-        {
-            var sig = new Signature(records[i].shapeType, records[i].rotKey);
-            if (!bySig.TryGetValue(sig, out List<int> group))
-            {
-                group = new List<int>();
-                bySig.Add(sig, group);
-            }
-
-            group.Add(i);
-        }
-
-        var dedup = new HashSet<VectorKey>();
-        var candidates = new List<CandidateVector>();
-
-        foreach (var kv in bySig)
-        {
-            List<int> g = kv.Value;
-            for (int i = 0; i < g.Count; i++)
-            {
-                Vector2 p0 = records[g[i]].pos;
-                for (int j = i + 1; j < g.Count; j++)
+                if (map.TryGetValue(key, out EdgeCounter c))
                 {
-                    Vector2 p1 = records[g[j]].pos;
-                    Vector2 v = p1 - p0;
-                    if (v.magnitude < minLen)
+                    c.count++;
+                    map[key] = c;
+                }
+                else
+                {
+                    map.Add(key, new EdgeCounter
                     {
-                        continue;
-                    }
-
-                    VectorKey vk = new VectorKey(v, posQ);
-                    if (!dedup.Add(vk))
-                    {
-                        continue;
-                    }
-
-                    float score = ScoreTranslation(records, index, inner, bounds, v, posQ);
-                    if (score >= threshold)
-                    {
-                        candidates.Add(new CandidateVector
-                        {
-                            v = v,
-                            score = score
-                        });
-                    }
-
-                    Vector2 vn = -v;
-                    VectorKey vkn = new VectorKey(vn, posQ);
-                    if (dedup.Add(vkn))
-                    {
-                        float scoreN = ScoreTranslation(records, index, inner, bounds, vn, posQ);
-                        if (scoreN >= threshold)
-                        {
-                            candidates.Add(new CandidateVector
-                            {
-                                v = vn,
-                                score = scoreN
-                            });
-                        }
-                    }
+                        count = 1,
+                        a = a,
+                        b = b
+                    });
                 }
             }
         }
 
-        return candidates;
+        var boundary = new List<BoundaryEdge>();
+        foreach (var kv in map)
+        {
+            if (kv.Value.count == 1)
+            {
+                boundary.Add(new BoundaryEdge
+                {
+                    a = kv.Value.a,
+                    b = kv.Value.b
+                });
+            }
+        }
+
+        return boundary;
     }
 
-    private static float ScoreTranslation(
-        List<CellRecord> records,
-        Dictionary<GlobalKey, byte> index,
-        Rect inner,
-        Rect bounds,
-        Vector2 v,
-        float posQ)
+    private static List<Vector2> BuildTranslationCandidates(
+        List<BoundaryEdge> boundary,
+        float posQ,
+        float minLen)
     {
-        int total = 0;
-        int hit = 0;
+        var set = new HashSet<VectorKey>();
+        var list = new List<Vector2>();
+        const float epsDir = 1e-5f;
 
-        for (int i = 0; i < records.Count; i++)
+        for (int i = 0; i < boundary.Count; i++)
         {
-            CellRecord r = records[i];
-            if (!inner.Contains(r.pos))
+            Vector2 eA = boundary[i].a;
+            Vector2 eB = boundary[i].b;
+            Vector2 eDir = eB - eA;
+            float eLen = eDir.magnitude;
+            if (eLen <= 1e-8f)
             {
                 continue;
             }
 
-            Vector2 targetPos = r.pos + v;
-            if (!bounds.Contains(targetPos))
+            Vector2 eDirN = eDir / eLen;
+
+            for (int j = 0; j < boundary.Count; j++)
             {
-                continue;
-            }
-
-            total++;
-
-            Vector2 qt = QuantizeVec2(targetPos, posQ);
-            long qx = (long)Mathf.Round(qt.x * posQ);
-            long qy = (long)Mathf.Round(qt.y * posQ);
-            var key = new GlobalKey(qx, qy, (int)r.shapeType, r.rotKey);
-
-            if (index.ContainsKey(key))
-            {
-                hit++;
-            }
-        }
-
-        if (total <= 0)
-        {
-            return 0f;
-        }
-
-        return (float)hit / total;
-    }
-
-    private static bool TrySelectBasis(List<CandidateVector> candidates, float cellScale, out Vector2 b1, out Vector2 b2)
-    {
-        b1 = default;
-        b2 = default;
-
-        float bestCost = float.PositiveInfinity;
-        float areaEps = Mathf.Max(1e-6f, 0.01f * cellScale * cellScale);
-
-        for (int i = 0; i < candidates.Count; i++)
-        {
-            for (int j = i + 1; j < candidates.Count; j++)
-            {
-                Vector2 v1 = candidates[i].v;
-                Vector2 v2 = candidates[j].v;
-                float area = Mathf.Abs(Cross(v1, v2));
-                if (area <= areaEps)
+                if (i == j)
                 {
                     continue;
                 }
 
-                float pairScore = 0.5f * (candidates[i].score + candidates[j].score);
-                float cost = area / Mathf.Max(pairScore, 1e-4f);
-                if (cost < bestCost)
+                Vector2 fA = boundary[j].a;
+                Vector2 fB = boundary[j].b;
+                Vector2 fDir = fB - fA;
+                float fLen = fDir.magnitude;
+                if (fLen <= 1e-8f)
                 {
-                    bestCost = cost;
-                    b1 = v1;
-                    b2 = v2;
+                    continue;
+                }
+
+                if (Mathf.Abs(eLen - fLen) > 1e-5f)
+                {
+                    continue;
+                }
+
+                Vector2 fDirN = fDir / fLen;
+                if ((eDirN + fDirN).sqrMagnitude > epsDir)
+                {
+                    continue;
+                }
+
+                Vector2 t1 = fB - eA;
+                Vector2 t2 = fA - eB;
+                if ((t1 - t2).sqrMagnitude > 1e-8f)
+                {
+                    continue;
+                }
+
+                if (t1.magnitude < minLen)
+                {
+                    continue;
+                }
+
+                Vector2 qT = QuantizeVec2(t1, posQ);
+                var key = new VectorKey(qT, posQ);
+                if (set.Add(key))
+                {
+                    list.Add(qT);
                 }
             }
         }
 
-        return !float.IsPositiveInfinity(bestCost);
+        return list;
+    }
+
+    private static bool TryBuildBoundaryPairingStrict(
+        List<BoundaryEdge> boundary,
+        Vector2 b1,
+        Vector2 b2,
+        float posQ,
+        out int[] pairMap)
+    {
+        pairMap = null;
+
+        float det = Cross(b1, b2);
+        if (Mathf.Abs(det) < 1e-10f)
+        {
+            return false;
+        }
+
+        int n = boundary.Count;
+        if ((n & 1) != 0)
+        {
+            return false;
+        }
+
+        var options = new List<int>[n];
+        for (int i = 0; i < n; i++)
+        {
+            options[i] = new List<int>();
+        }
+
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = i + 1; j < n; j++)
+            {
+                if (IsValidBoundaryPair(boundary[i], boundary[j], b1, b2, det, posQ))
+                {
+                    options[i].Add(j);
+                    options[j].Add(i);
+                }
+            }
+        }
+
+        for (int i = 0; i < n; i++)
+        {
+            if (options[i].Count == 0)
+            {
+                return false;
+            }
+        }
+
+        pairMap = new int[n];
+        for (int i = 0; i < n; i++)
+        {
+            pairMap[i] = -1;
+        }
+
+        var used = new bool[n];
+        return BacktrackPairing(options, used, pairMap);
+    }
+
+    private static bool BacktrackPairing(List<int>[] options, bool[] used, int[] pairMap)
+    {
+        int n = used.Length;
+        int pivot = -1;
+        int minCount = int.MaxValue;
+
+        for (int i = 0; i < n; i++)
+        {
+            if (used[i])
+            {
+                continue;
+            }
+
+            int cnt = 0;
+            List<int> ops = options[i];
+            for (int k = 0; k < ops.Count; k++)
+            {
+                if (!used[ops[k]])
+                {
+                    cnt++;
+                }
+            }
+
+            if (cnt == 0)
+            {
+                return false;
+            }
+
+            if (cnt < minCount)
+            {
+                minCount = cnt;
+                pivot = i;
+                if (cnt == 1)
+                {
+                    break;
+                }
+            }
+        }
+
+        if (pivot < 0)
+        {
+            return true;
+        }
+
+        used[pivot] = true;
+        List<int> pOps = options[pivot];
+
+        for (int k = 0; k < pOps.Count; k++)
+        {
+            int j = pOps[k];
+            if (used[j])
+            {
+                continue;
+            }
+
+            used[j] = true;
+            pairMap[pivot] = j;
+            pairMap[j] = pivot;
+
+            if (BacktrackPairing(options, used, pairMap))
+            {
+                return true;
+            }
+
+            pairMap[pivot] = -1;
+            pairMap[j] = -1;
+            used[j] = false;
+        }
+
+        used[pivot] = false;
+        return false;
+    }
+
+    private static bool IsValidBoundaryPair(
+        BoundaryEdge e,
+        BoundaryEdge f,
+        Vector2 b1,
+        Vector2 b2,
+        float det,
+        float posQ)
+    {
+        const float dirEps = 1e-5f;
+        const float transEps = 1e-8f;
+
+        Vector2 ai = e.a;
+        Vector2 bi = e.b;
+        Vector2 di = bi - ai;
+        float li = di.magnitude;
+        if (li <= 1e-10f)
+        {
+            return false;
+        }
+
+        Vector2 aj = f.a;
+        Vector2 bj = f.b;
+        Vector2 dj = bj - aj;
+        float lj = dj.magnitude;
+        if (lj <= 1e-10f)
+        {
+            return false;
+        }
+
+        if (Mathf.Abs(li - lj) > 1e-5f)
+        {
+            return false;
+        }
+
+        Vector2 dni = di / li;
+        Vector2 dnj = dj / lj;
+        if ((dni + dnj).sqrMagnitude > dirEps)
+        {
+            return false;
+        }
+
+        Vector2 t1 = bj - ai;
+        Vector2 t2 = aj - bi;
+        if ((QuantizeVec2(t1, posQ) - QuantizeVec2(t2, posQ)).sqrMagnitude > transEps)
+        {
+            return false;
+        }
+
+        if (!TryGetQuantizedLatticeShift(t1, b1, b2, det, posQ, out Vector2 shift))
+        {
+            return false;
+        }
+
+        Vector2 qai = QuantizeVec2(ai + shift, posQ);
+        Vector2 qbi = QuantizeVec2(bi + shift, posQ);
+        Vector2 qaj = QuantizeVec2(aj, posQ);
+        Vector2 qbj = QuantizeVec2(bj, posQ);
+
+        return (qai - qbj).sqrMagnitude <= transEps && (qbi - qaj).sqrMagnitude <= transEps;
+    }
+
+    private static bool TryGetQuantizedLatticeShift(
+        Vector2 t,
+        Vector2 b1,
+        Vector2 b2,
+        float det,
+        float posQ,
+        out Vector2 shift)
+    {
+        shift = default;
+
+        Vector2 uv = WorldToLattice(t, b1, b2, det);
+        float mi = Mathf.Round(uv.x);
+        float ni = Mathf.Round(uv.y);
+
+        const float coeffEps = 1e-4f;
+        if (Mathf.Abs(uv.x - mi) > coeffEps || Mathf.Abs(uv.y - ni) > coeffEps)
+        {
+            return false;
+        }
+
+        Vector2 s = mi * b1 + ni * b2;
+        Vector2 qt = QuantizeVec2(t, posQ);
+        Vector2 qs = QuantizeVec2(s, posQ);
+
+        if ((qt - qs).sqrMagnitude > 1e-8f)
+        {
+            return false;
+        }
+
+        shift = qs;
+        return true;
+    }
+
+    private static bool ValidateVertexAngleSumStrictUnionFind(
+        List<CellRecord> records,
+        List<BoundaryEdge> boundary,
+        int[] pairMap,
+        float posQ)
+    {
+        List<VertexInstance> instances = BuildVertexInstances(records, posQ);
+        if (instances.Count == 0)
+        {
+            return false;
+        }
+
+        var pointToIds = new Dictionary<PointKey, List<int>>();
+        for (int i = 0; i < instances.Count; i++)
+        {
+            PointKey key = instances[i].key;
+            if (!pointToIds.TryGetValue(key, out List<int> ids))
+            {
+                ids = new List<int>();
+                pointToIds.Add(key, ids);
+            }
+
+            ids.Add(i);
+        }
+
+        var dsu = new DisjointSet(instances.Count);
+
+        foreach (var kv in pointToIds)
+        {
+            List<int> ids = kv.Value;
+            for (int i = 1; i < ids.Count; i++)
+            {
+                dsu.Union(ids[0], ids[i]);
+            }
+        }
+
+        for (int i = 0; i < boundary.Count; i++)
+        {
+            int j = pairMap[i];
+            if (j < 0)
+            {
+                return false;
+            }
+
+            if (i > j)
+            {
+                continue;
+            }
+
+            PointKey a = new PointKey(boundary[i].a, posQ);
+            PointKey b = new PointKey(boundary[i].b, posQ);
+            PointKey c = new PointKey(boundary[j].a, posQ);
+            PointKey d = new PointKey(boundary[j].b, posQ);
+
+            if (!UnionPointClasses(dsu, pointToIds, a, d))
+            {
+                return false;
+            }
+
+            if (!UnionPointClasses(dsu, pointToIds, b, c))
+            {
+                return false;
+            }
+        }
+
+        var sumByRoot = new Dictionary<int, float>();
+        for (int i = 0; i < instances.Count; i++)
+        {
+            int root = dsu.Find(i);
+            if (sumByRoot.TryGetValue(root, out float sum))
+            {
+                sumByRoot[root] = sum + instances[i].angle;
+            }
+            else
+            {
+                sumByRoot.Add(root, instances[i].angle);
+            }
+        }
+
+        const float angleEps = 2e-2f;
+        const float twoPi = 2f * Mathf.PI;
+
+        foreach (var kv in sumByRoot)
+        {
+            if (Mathf.Abs(kv.Value - twoPi) > angleEps)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static List<VertexInstance> BuildVertexInstances(List<CellRecord> records, float posQ)
+    {
+        var list = new List<VertexInstance>();
+
+        for (int i = 0; i < records.Count; i++)
+        {
+            Vector2[] verts = records[i].verts;
+            int n = verts.Length;
+
+            for (int v = 0; v < n; v++)
+            {
+                Vector2 prev = verts[(v - 1 + n) % n];
+                Vector2 curr = verts[v];
+                Vector2 next = verts[(v + 1) % n];
+
+                Vector2 v1 = (prev - curr).normalized;
+                Vector2 v2 = (next - curr).normalized;
+                float angle = Vector2.Angle(v1, v2) * Mathf.Deg2Rad;
+
+                list.Add(new VertexInstance
+                {
+                    key = new PointKey(curr, posQ),
+                    angle = angle
+                });
+            }
+        }
+
+        return list;
+    }
+
+    private static bool UnionPointClasses(
+        DisjointSet dsu,
+        Dictionary<PointKey, List<int>> pointToIds,
+        PointKey p0,
+        PointKey p1)
+    {
+        if (!pointToIds.TryGetValue(p0, out List<int> a) || a.Count == 0)
+        {
+            return false;
+        }
+
+        if (!pointToIds.TryGetValue(p1, out List<int> b) || b.Count == 0)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < a.Count; i++)
+        {
+            dsu.Union(a[i], b[0]);
+        }
+
+        for (int j = 1; j < b.Count; j++)
+        {
+            dsu.Union(b[0], b[j]);
+        }
+
+        return true;
+    }
+
+    private static List<DetectedCell> BuildMotif(
+        List<CellRecord> records,
+        Vector2 origin,
+        Vector2 b1,
+        Vector2 b2,
+        float posQ)
+    {
+        float det = Cross(b1, b2);
+        if (Mathf.Abs(det) < 1e-10f)
+        {
+            return new List<DetectedCell>();
+        }
+
+        var dedup = new HashSet<string>();
+        var motif = new List<DetectedCell>();
+
+        for (int i = 0; i < records.Count; i++)
+        {
+            CellRecord r = records[i];
+            Vector2 d = r.pos - origin;
+            Vector2 uv = WorldToLattice(d, b1, b2, det);
+
+            float u = Wrap01(uv.x);
+            float v = Wrap01(uv.y);
+
+            Vector2 local = QuantizeVec2(u * b1 + v * b2, posQ);
+            string key = $"{(int)r.shapeType}|{r.rotKey}|{Mathf.RoundToInt(local.x * posQ)}|{Mathf.RoundToInt(local.y * posQ)}";
+
+            if (!dedup.Add(key))
+            {
+                continue;
+            }
+
+            motif.Add(new DetectedCell(
+                r.shapeType,
+                local,
+                r.rotDeg,
+                (int)r.shapeType));
+        }
+
+        return motif;
+    }
+
+    private static void ComputeShapeInfo(List<CellRecord> records, out CellShapeType baselineShape, out int shapeNum)
+    {
+        int minShape = int.MaxValue;
+        var set = new HashSet<int>();
+
+        for (int i = 0; i < records.Count; i++)
+        {
+            int v = (int)records[i].shapeType;
+            set.Add(v);
+            if (v < minShape)
+            {
+                minShape = v;
+            }
+        }
+
+        baselineShape = (CellShapeType)minShape;
+        shapeNum = set.Count;
     }
 
     private static void ReduceBasis(ref Vector2 b1, ref Vector2 b2)
@@ -506,193 +964,39 @@ public sealed class PeriodicMotifDetector
         }
     }
 
-    private static List<DetectedCell> BuildMotif(
-        List<CellRecord> records,
-        Vector2 b1,
-        Vector2 b2,
-        Vector2 origin,
-        float posQ)
+    private static Vector2 WorldToLattice(Vector2 d, Vector2 b1, Vector2 b2, float det)
     {
-        float det = b1.x * b2.y - b1.y * b2.x;
-        if (Mathf.Abs(det) < 1e-10f)
-        {
-            return new List<DetectedCell>();
-        }
-
-        var dedup = new HashSet<string>();
-        var motif = new List<DetectedCell>();
-
-        for (int i = 0; i < records.Count; i++)
-        {
-            CellRecord r = records[i];
-            Vector2 d = r.pos - origin;
-
-            float u = (d.x * b2.y - d.y * b2.x) / det;
-            float v = (-d.x * b1.y + d.y * b1.x) / det;
-
-            u = Wrap01(u);
-            v = Wrap01(v);
-
-            Vector2 local = QuantizeVec2(u * b1 + v * b2, posQ);
-
-            string key = $"{(int)r.shapeType}|{r.rotKey}|{Mathf.RoundToInt(local.x * posQ)}|{Mathf.RoundToInt(local.y * posQ)}";
-            if (!dedup.Add(key))
-            {
-                continue;
-            }
-
-            motif.Add(new DetectedCell(
-                r.shapeType,
-                local,
-                r.rotDeg,
-                (int)r.shapeType));
-        }
-
-        return motif;
-    }
-
-    private static bool ValidateRetiling(
-        List<CellRecord> records,
-        Dictionary<GlobalKey, byte> index,
-        List<DetectedCell> motif,
-        Vector2 origin,
-        Vector2 b1,
-        Vector2 b2,
-        Rect inner,
-        float posQ,
-        float passThreshold)
-    {
-        if (motif.Count == 0)
-        {
-            return false;
-        }
-
-        float det = b1.x * b2.y - b1.y * b2.x;
-        if (Mathf.Abs(det) < 1e-10f)
-        {
-            return false;
-        }
-
-        int actualTotal = 0;
-        int actualMatched = 0;
-
-        for (int i = 0; i < records.Count; i++)
-        {
-            CellRecord r = records[i];
-            if (!inner.Contains(r.pos))
-            {
-                continue;
-            }
-
-            actualTotal++;
-            Vector2 d = r.pos - origin;
-            float u = (d.x * b2.y - d.y * b2.x) / det;
-            float v = (-d.x * b1.y + d.y * b1.x) / det;
-
-            Vector2 local = QuantizeVec2(Wrap01(u) * b1 + Wrap01(v) * b2, posQ);
-            bool found = false;
-            for (int m = 0; m < motif.Count; m++)
-            {
-                DetectedCell mc = motif[m];
-                if (mc.shapeType != r.shapeType)
-                {
-                    continue;
-                }
-
-                int mk = Mathf.RoundToInt(mc.localRotationDeg * 10000f);
-                if (mk != r.rotKey)
-                {
-                    continue;
-                }
-
-                if ((mc.localCenter - local).sqrMagnitude <= 1e-8f)
-                {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (found)
-            {
-                actualMatched++;
-            }
-        }
-
-        if (actualTotal == 0)
-        {
-            return false;
-        }
-
-        float recall = (float)actualMatched / actualTotal;
-        return recall >= passThreshold;
-    }
-
-    private static Rect BuildBounds(List<CellRecord> records)
-    {
-        float minX = float.PositiveInfinity;
-        float minY = float.PositiveInfinity;
-        float maxX = float.NegativeInfinity;
-        float maxY = float.NegativeInfinity;
-
-        for (int i = 0; i < records.Count; i++)
-        {
-            Vector2 p = records[i].pos;
-            if (p.x < minX)
-                minX = p.x;
-            if (p.y < minY)
-                minY = p.y;
-            if (p.x > maxX)
-                maxX = p.x;
-            if (p.y > maxY)
-                maxY = p.y;
-        }
-
-        return Rect.MinMaxRect(minX, minY, maxX, maxY);
-    }
-
-    private static Rect ShrinkRect(Rect rect, float margin)
-    {
-        float minX = rect.xMin + margin;
-        float maxX = rect.xMax - margin;
-        float minY = rect.yMin + margin;
-        float maxY = rect.yMax - margin;
-
-        if (minX >= maxX || minY >= maxY)
-        {
-            return rect;
-        }
-
-        return Rect.MinMaxRect(minX, minY, maxX, maxY);
-    }
-
-    private static void ComputeShapeInfo(List<CellRecord> records, out CellShapeType baselineShape, out int shapeNum)
-    {
-        int minShape = int.MaxValue;
-        var set = new HashSet<int>();
-
-        for (int i = 0; i < records.Count; i++)
-        {
-            int v = (int)records[i].shapeType;
-            set.Add(v);
-            if (v < minShape)
-            {
-                minShape = v;
-            }
-        }
-
-        baselineShape = (CellShapeType)minShape;
-        shapeNum = set.Count;
+        float u = (d.x * b2.y - d.y * b2.x) / det;
+        float v = (-d.x * b1.y + d.y * b1.x) / det;
+        return new Vector2(u, v);
     }
 
     private static float Wrap01(float x)
     {
         x -= Mathf.Floor(x);
-        if (x > 0.99999f || x < 0.00001f)
+
+        const float seamEps = 1e-4f;
+        if (x > 1f - seamEps || x < seamEps)
         {
             return 0f;
         }
 
         return x;
+    }
+
+    private static Vector2[] BuildWorldVertices(TileSO tile, Vector2 pos, float rotDeg, float cellScale)
+    {
+        Vector2[] src = tile.localVertices;
+        int n = src.Length;
+        Vector2[] dst = new Vector2[n];
+
+        for (int i = 0; i < n; i++)
+        {
+            Vector2 p = src[i] * cellScale;
+            dst[i] = PolygonSnapSolver.Rotate(p, rotDeg) + pos;
+        }
+
+        return dst;
     }
 
     private static float Cross(Vector2 a, Vector2 b)

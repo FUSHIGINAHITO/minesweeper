@@ -29,7 +29,7 @@ public class PeriodicMotifSO : ScriptableObject
     public Vector2 basis1Unit = Vector2.right;
     public Vector2 basis2Unit = Vector2.up;
 
-    [Header("最小基元 Cell 列表（单位坐标，运行时会乘 s）")]
+    [Header("基元 Cell 列表（单位坐标，运行时会乘 s）")]
     public MotifCellData[] cells = Array.Empty<MotifCellData>();
 
     [Header("量化（用于导出/重建一致性）")]

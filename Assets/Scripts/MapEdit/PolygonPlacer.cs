@@ -69,6 +69,7 @@ public partial class PolygonPlacer : MonoBehaviour
     private bool previewCanPlace;
 
     private int selectedSnapEdgeIndex = -1;
+    private int detectedSnapEdgeIndex = -1;
     private bool hasActiveBoundaryEdge;
     private BoundaryEdge activeBoundaryEdge;
     private bool isSnapLatched;
@@ -148,6 +149,7 @@ public partial class PolygonPlacer : MonoBehaviour
             hasActiveBoundaryEdge = false;
             isSnapLatched = false;
             selectedSnapEdgeIndex = -1;
+            detectedSnapEdgeIndex = -1;
             ClearOverlapGizmoState();
         }
 
@@ -185,6 +187,7 @@ public partial class PolygonPlacer : MonoBehaviour
         heldRotationDeg = 0f;
         snappedRotationDeg = 0f;
         selectedSnapEdgeIndex = -1;
+        detectedSnapEdgeIndex = -1;
         isSnapLatched = false;
 
         hasSnapSolution = false;
@@ -209,6 +212,7 @@ public partial class PolygonPlacer : MonoBehaviour
     {
         currentTileIndex = -1;
         selectedSnapEdgeIndex = -1;
+        detectedSnapEdgeIndex = -1;
         hasSnapSolution = false;
         previewCanPlace = false;
         hasActiveBoundaryEdge = false;
@@ -230,6 +234,7 @@ public partial class PolygonPlacer : MonoBehaviour
             previewCanPlace = true;
             hasActiveBoundaryEdge = false;
             selectedSnapEdgeIndex = -1;
+            detectedSnapEdgeIndex = -1;
             isSnapLatched = false;
             ClearOverlapGizmoState();
             return;
@@ -256,6 +261,7 @@ public partial class PolygonPlacer : MonoBehaviour
             previewCanPlace = false;
             hasActiveBoundaryEdge = false;
             selectedSnapEdgeIndex = -1;
+            detectedSnapEdgeIndex = -1;
             isSnapLatched = false;
             snappedPos = mouseWorld;
             snappedRotationDeg = heldRotationDeg;
@@ -267,6 +273,7 @@ public partial class PolygonPlacer : MonoBehaviour
         {
             activeBoundaryEdge = edge;
             selectedSnapEdgeIndex = detectedEdgeIndex;
+            detectedSnapEdgeIndex = detectedEdgeIndex;
             isSnapLatched = true;
         }
 
@@ -293,6 +300,7 @@ public partial class PolygonPlacer : MonoBehaviour
             previewCanPlace = false;
             hasActiveBoundaryEdge = false;
             selectedSnapEdgeIndex = -1;
+            detectedSnapEdgeIndex = -1;
             isSnapLatched = false;
             snappedPos = mouseWorld;
             snappedRotationDeg = heldRotationDeg;
@@ -327,7 +335,6 @@ public partial class PolygonPlacer : MonoBehaviour
                 out Vector2 pos,
                 out float rotDeg))
         {
-            heldRotationDeg = rotDeg;
             snappedRotationDeg = rotDeg;
             snappedPos = new Vector3(pos.x, pos.y, placementZ);
 
@@ -341,6 +348,7 @@ public partial class PolygonPlacer : MonoBehaviour
             hasActiveBoundaryEdge = false;
             isSnapLatched = false;
             selectedSnapEdgeIndex = -1;
+            detectedSnapEdgeIndex = -1;
             ClearOverlapGizmoState();
         }
     }
@@ -367,6 +375,7 @@ public partial class PolygonPlacer : MonoBehaviour
 
         isSnapLatched = false;
         selectedSnapEdgeIndex = -1;
+        detectedSnapEdgeIndex = -1;
         hasActiveBoundaryEdge = false;
         ClearOverlapGizmoState();
     }
@@ -833,6 +842,7 @@ public partial class PolygonPlacer : MonoBehaviour
 
         nextPlacedOrder = placedOrderStart;
         selectedSnapEdgeIndex = -1;
+        detectedSnapEdgeIndex = -1;
         hasActiveBoundaryEdge = false;
         hasSnapSolution = false;
         previewCanPlace = false;

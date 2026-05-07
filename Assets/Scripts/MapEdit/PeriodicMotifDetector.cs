@@ -214,6 +214,221 @@ public sealed class PeriodicMotifDetector
         }
     }
 
+    // Edmonds Blossom（一般图最大匹配）
+    private sealed class BlossomMatcher
+    {
+        private readonly int n;
+        private readonly List<int>[] graph;
+
+        private readonly int[] match;
+        private readonly int[] parent;
+        private readonly int[] baseVertex;
+        private readonly bool[] used;
+        private readonly bool[] blossom;
+
+        private readonly Queue<int> queue = new Queue<int>();
+
+        public BlossomMatcher(List<int>[] graph)
+        {
+            this.graph = graph;
+            n = graph.Length;
+
+            match = new int[n];
+            parent = new int[n];
+            baseVertex = new int[n];
+            used = new bool[n];
+            blossom = new bool[n];
+
+            for (int i = 0; i < n; i++)
+            {
+                match[i] = -1;
+                parent[i] = -1;
+                baseVertex[i] = i;
+            }
+        }
+
+        public bool TryGetPerfectMatching(out int[] pairMap)
+        {
+            pairMap = null;
+
+            if ((n & 1) != 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                if (match[i] != -1)
+                {
+                    continue;
+                }
+
+                int finish = FindAugmentingPath(i);
+                if (finish < 0)
+                {
+                    continue;
+                }
+
+                Augment(finish);
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                if (match[i] < 0)
+                {
+                    return false;
+                }
+            }
+
+            pairMap = new int[n];
+            for (int i = 0; i < n; i++)
+            {
+                pairMap[i] = match[i];
+            }
+
+            return true;
+        }
+
+        private void Augment(int v)
+        {
+            while (v != -1)
+            {
+                int pv = parent[v];
+                int nv = pv == -1 ? -1 : match[pv];
+
+                match[v] = pv;
+                if (pv != -1)
+                {
+                    match[pv] = v;
+                }
+
+                v = nv;
+            }
+        }
+
+        private int FindAugmentingPath(int root)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                used[i] = false;
+                parent[i] = -1;
+                baseVertex[i] = i;
+            }
+
+            queue.Clear();
+            queue.Enqueue(root);
+            used[root] = true;
+
+            while (queue.Count > 0)
+            {
+                int v = queue.Dequeue();
+
+                List<int> adj = graph[v];
+                for (int k = 0; k < adj.Count; k++)
+                {
+                    int u = adj[k];
+
+                    if (baseVertex[v] == baseVertex[u] || match[v] == u)
+                    {
+                        continue;
+                    }
+
+                    if (u == root || (match[u] != -1 && parent[match[u]] != -1))
+                    {
+                        int curBase = Lca(v, u);
+
+                        for (int i = 0; i < n; i++)
+                        {
+                            blossom[i] = false;
+                        }
+
+                        MarkPath(v, curBase, u);
+                        MarkPath(u, curBase, v);
+
+                        for (int i = 0; i < n; i++)
+                        {
+                            if (!blossom[baseVertex[i]])
+                            {
+                                continue;
+                            }
+
+                            baseVertex[i] = curBase;
+                            if (!used[i])
+                            {
+                                used[i] = true;
+                                queue.Enqueue(i);
+                            }
+                        }
+                    }
+                    else if (parent[u] == -1)
+                    {
+                        parent[u] = v;
+
+                        if (match[u] == -1)
+                        {
+                            return u;
+                        }
+
+                        int m = match[u];
+                        used[m] = true;
+                        queue.Enqueue(m);
+                    }
+                }
+            }
+
+            return -1;
+        }
+
+        private int Lca(int a, int b)
+        {
+            var visited = new bool[n];
+
+            while (true)
+            {
+                a = baseVertex[a];
+                visited[a] = true;
+
+                if (match[a] == -1)
+                {
+                    break;
+                }
+
+                a = parent[match[a]];
+            }
+
+            while (true)
+            {
+                b = baseVertex[b];
+                if (visited[b])
+                {
+                    return b;
+                }
+
+                if (match[b] == -1)
+                {
+                    break;
+                }
+
+                b = parent[match[b]];
+            }
+
+            return -1;
+        }
+
+        private void MarkPath(int v, int b, int child)
+        {
+            while (baseVertex[v] != b)
+            {
+                blossom[baseVertex[v]] = true;
+                blossom[baseVertex[match[v]]] = true;
+
+                parent[v] = child;
+                child = match[v];
+                v = parent[match[v]];
+            }
+        }
+    }
+
     public bool TryDetect(
         IReadOnlyList<PlacedTileData> placedTiles,
         MainDataSO mainDataSO,
@@ -548,87 +763,8 @@ public sealed class PeriodicMotifDetector
             }
         }
 
-        pairMap = new int[n];
-        for (int i = 0; i < n; i++)
-        {
-            pairMap[i] = -1;
-        }
-
-        var used = new bool[n];
-        return BacktrackPairing(options, used, pairMap);
-    }
-
-    private static bool BacktrackPairing(List<int>[] options, bool[] used, int[] pairMap)
-    {
-        int n = used.Length;
-        int pivot = -1;
-        int minCount = int.MaxValue;
-
-        for (int i = 0; i < n; i++)
-        {
-            if (used[i])
-            {
-                continue;
-            }
-
-            int cnt = 0;
-            List<int> ops = options[i];
-            for (int k = 0; k < ops.Count; k++)
-            {
-                if (!used[ops[k]])
-                {
-                    cnt++;
-                }
-            }
-
-            if (cnt == 0)
-            {
-                return false;
-            }
-
-            if (cnt < minCount)
-            {
-                minCount = cnt;
-                pivot = i;
-                if (cnt == 1)
-                {
-                    break;
-                }
-            }
-        }
-
-        if (pivot < 0)
-        {
-            return true;
-        }
-
-        used[pivot] = true;
-        List<int> pOps = options[pivot];
-
-        for (int k = 0; k < pOps.Count; k++)
-        {
-            int j = pOps[k];
-            if (used[j])
-            {
-                continue;
-            }
-
-            used[j] = true;
-            pairMap[pivot] = j;
-            pairMap[j] = pivot;
-
-            if (BacktrackPairing(options, used, pairMap))
-            {
-                return true;
-            }
-
-            pairMap[pivot] = -1;
-            pairMap[j] = -1;
-            used[j] = false;
-        }
-
-        used[pivot] = false;
-        return false;
+        var matcher = new BlossomMatcher(options);
+        return matcher.TryGetPerfectMatching(out pairMap);
     }
 
     private static bool IsValidBoundaryPair(

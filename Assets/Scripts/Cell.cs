@@ -65,6 +65,12 @@ public class Cell : CellPool.PoolObj
         image.color = isBorder ? mainDataSO.borderColor : mainDataSO.defaultColor;
     }
 
+    public void InitShowEditArt()
+    {
+        ShowRevealArt(true);
+        image.color = 0.5f * Color.white;
+    }
+
     public void GetUnshownNeighbors(List<Cell> res)
     {
         res.Clear();

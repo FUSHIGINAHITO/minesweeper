@@ -189,7 +189,7 @@ public class PolygonPlacementView : MonoBehaviour
     {
         Cell cell = PoolManager.instance.cellPool.Require();
         cell.Init(tile.shapeType, pos, Quaternion.Euler(0f, 0f, rotDeg), scale, false, -1);
-        cell.InitShowArt();
+        cell.InitShowEditArt();
         return cell;
     }
 }

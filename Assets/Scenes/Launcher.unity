@@ -939,7 +939,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed0c698fea2621f478961fdec63b5c12, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 3
+  cellSize: 0.7
   mineRatio: 0.1
 --- !u!1 &1327380922
 GameObject:
@@ -1031,7 +1031,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e8df028b5c1c4c4ba69b4d7b5e05cc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSize: 2
+  cellSize: 0.5
   mineRatio: 0.1
 --- !u!1 &1509027475
 GameObject:

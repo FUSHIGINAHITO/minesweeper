@@ -1,8 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
-public abstract class PeriodicMotifMap : TilingMap
+public class PeriodicMotifMap : TilingMap
 {
+    public PeriodicMotifSO motifSO;
+
+    public override CellShapeType BaselineShape => motifSO.baselineShape;
+    public override int ShapeNum => motifSO.shapeNum;
+
     protected readonly struct MotifCell
     {
         public readonly CellShapeType shapeType;
@@ -22,8 +28,42 @@ public abstract class PeriodicMotifMap : TilingMap
     protected virtual int LatticePadding => 2;
     protected virtual float PlacementQuantizeScale => 10000f;
 
-    protected abstract void BuildPattern(float s, out Vector2 b1, out Vector2 b2, out MotifCell[] motif);
+    // 兼容旧实现：当 motifSO 不可用时，仍可由子类覆盖提供数据
+    protected virtual void BuildPattern(float s, out Vector2 b1, out Vector2 b2, out MotifCell[] motif)
+    {
+        b1 = Vector2.right * s;
+        b2 = Vector2.up * s;
+        motif = Array.Empty<MotifCell>();
+    }
 
+    protected bool TryBuildPatternFromMotifSO(float s, out Vector2 b1, out Vector2 b2, out MotifCell[] motif)
+    {
+        if (motifSO == null || motifSO.cells == null || motifSO.cells.Length == 0)
+        {
+            b1 = default;
+            b2 = default;
+            motif = Array.Empty<MotifCell>();
+            return false;
+        }
+
+        b1 = motifSO.basis1Unit * s;
+        b2 = motifSO.basis2Unit * s;
+
+        var src = motifSO.cells;
+        motif = new MotifCell[src.Length];
+
+        for (int i = 0; i < src.Length; i++)
+        {
+            var c = src[i];
+            motif[i] = new MotifCell(
+                c.shapeType,
+                c.localCenterUnit * s,
+                c.localRotationDeg,
+                c.typeId);
+        }
+
+        return true;
+    }
     protected override void GenerateGrid()
     {
         float s = cellSize;
@@ -43,7 +83,19 @@ public abstract class PeriodicMotifMap : TilingMap
             (bottomLeft.x + topRight.x) * 0.5f,
             (bottomLeft.y + topRight.y) * 0.5f);
 
-        BuildPattern(s, out Vector2 b1, out Vector2 b2, out MotifCell[] motif);
+        Vector2 b1;
+        Vector2 b2;
+        MotifCell[] motif;
+
+        if (!TryBuildPatternFromMotifSO(s, out b1, out b2, out motif))
+        {
+            BuildPattern(s, out b1, out b2, out motif);
+        }
+
+        if (motif == null || motif.Length == 0)
+        {
+            return;
+        }
 
         float det = b1.x * b2.y - b1.y * b2.x;
         if (Mathf.Abs(det) < 1e-8f)

@@ -10,8 +10,7 @@ public class Game : MonoBehaviour
     public bool debug;
     public MainDataSO so;
 
-    private Map[] maps;
-    [HideInInspector, NonSerialized] public Map map;
+    [HideInInspector, NonSerialized] public PeriodicMotifMap map;
     private int curId;
 
     private class ChordData
@@ -48,7 +47,7 @@ public class Game : MonoBehaviour
     {
         _instance = this;
 
-        maps = GetComponentsInChildren<Map>();
+        map = gameObject.AddComponent<PeriodicMotifMap>();
     }
 
     // 初始化地图与 UI
@@ -375,13 +374,9 @@ public class Game : MonoBehaviour
         DeactivateChord(false);
         pressedCell = null;
 
-        if (map != null)
-        {
-            map.Return();
-        }
-
-        map = maps[curId];
-        curId = (curId + 1) % maps.Length;
+        map.Return();
+        map.motifSO = so.periodicMotifs[curId];
+        curId = (curId + 1) % so.periodicMotifs.Count;
         map.Generate();
 
         gameOver = false;

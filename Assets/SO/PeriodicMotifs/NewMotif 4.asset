@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0ab813c7d4a22e4b9a1d672e8c9afda, type: 3}
+  m_Name: NewMotif 4
+  m_EditorClassIdentifier: 
+  motifId: NewMotif
+  baselineShape: 0
+  shapeNum: 2
+  basis1Unit: {x: 0.5, y: -1.86604}
+  basis2Unit: {x: -1.86604, y: -0.5}
+  cells:
+  - shapeType: 1
+    localCenterUnit: {x: 0, y: 0}
+    localRotationDeg: 0
+    typeId: 1
+  - shapeType: 0
+    localCenterUnit: {x: 0, y: 0.78868}
+    localRotationDeg: -0
+    typeId: 0
+  - shapeType: 0
+    localCenterUnit: {x: 0.78868, y: 0}
+    localRotationDeg: 30
+    typeId: 0
+  - shapeType: 1
+    localCenterUnit: {x: 1.18302, y: -0.68301}
+    localRotationDeg: 30
+    typeId: 1
+  - shapeType: 0
+    localCenterUnit: {x: 1.07736, y: 0.5}
+    localRotationDeg: -30
+    typeId: 0
+  - shapeType: 0
+    localCenterUnit: {x: 0, y: -0.78868}
+    localRotationDeg: 60
+    typeId: 0
+  positionQuantizeScale: 100000
+  rotationQuantizeScale: 10000

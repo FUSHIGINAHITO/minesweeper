@@ -5,6 +5,7 @@ using UnityEngine;
 public class MainDataSO : ScriptableObject
 {
     public List<TileSO> tiles = new();
+    public List<PeriodicMotifSO> periodicMotifs = new();
 
     public Material polygonBaseMaterial;
     public Material polygonBorderMaterial;

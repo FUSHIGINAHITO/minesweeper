@@ -65,10 +65,23 @@ public class Cell : CellPool.PoolObj
         image.color = isBorder ? mainDataSO.borderColor : mainDataSO.defaultColor;
     }
 
-    public void InitShowEditArt()
+    public void ShowEditArt(Color color, int v)
     {
         ShowRevealArt(true);
-        image.color = 0.5f * Color.white;
+        image.color = color;
+
+        /*if (v > 0)
+        {
+            if (text is null)
+            {
+                text = PoolManager.instance.textPool.Require();
+            }
+
+            text.transform.SetPositionAndRotation(trans.position, Quaternion.identity);
+            text.transform.localScale = 0.3f * Vector3.one;
+            text.text.text = v.ToString();
+            text.text.color = 0.2f * Color.black;
+        }*/
     }
 
     public void GetUnshownNeighbors(List<Cell> res)

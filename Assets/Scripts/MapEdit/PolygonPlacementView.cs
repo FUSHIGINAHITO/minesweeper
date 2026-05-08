@@ -101,17 +101,24 @@ public class PolygonPlacementView : MonoBehaviour
     }
 
     public void AddPlaced(
-        TileSO tile,
-        Vector3 pos,
-        float rotDeg,
-        float scale,
-        Transform parent,
-        int sortingOrder)
+    TileSO tile,
+    Vector3 pos,
+    float rotDeg,
+    float scale,
+    Transform parent,
+    int value,
+    Color? tintColor = null)
     {
         Cell cell = RequireCell(tile, pos, rotDeg, scale);
         cell.transform.SetParent(parent, true);
-        cell.image.sortingOrder = sortingOrder;
-        cell.image.color = new Color(cell.image.color.r, cell.image.color.g, cell.image.color.b, 1f);
+
+        if (tintColor.HasValue)
+        {
+            Color c = tintColor.Value;
+            c.a = 0.5f;
+            cell.ShowEditArt(c, value);
+        }
+
         placedCells.Add(cell);
     }
 
@@ -122,7 +129,7 @@ public class PolygonPlacementView : MonoBehaviour
             return;
         }
 
-        previewCell.Return();
+        previewCell.ReturnAll();
         previewCell = null;
         previewPoseInitialized = false;
         previewMoveVelocity = Vector3.zero;
@@ -134,7 +141,7 @@ public class PolygonPlacementView : MonoBehaviour
     {
         for (int i = 0; i < placedCells.Count; i++)
         {
-            placedCells[i].Return();
+            placedCells[i].ReturnAll();
         }
 
         placedCells.Clear();
@@ -189,7 +196,7 @@ public class PolygonPlacementView : MonoBehaviour
     {
         Cell cell = PoolManager.instance.cellPool.Require();
         cell.Init(tile.shapeType, pos, Quaternion.Euler(0f, 0f, rotDeg), scale, false, -1);
-        cell.InitShowEditArt();
+        cell.ShowEditArt(0.5f * Color.white, 0);
         return cell;
     }
 }

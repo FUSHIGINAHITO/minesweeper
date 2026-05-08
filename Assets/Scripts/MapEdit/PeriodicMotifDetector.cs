@@ -430,15 +430,15 @@ public sealed class PeriodicMotifDetector
     }
 
     public bool TryDetect(
-        IReadOnlyList<PlacedTileData> placedTiles,
-        MainDataSO mainDataSO,
-        float cellScale,
-        float positionQuantizeScale,
-        float rotationQuantizeScale,
-        float minTranslationLength,
-        float symmetryScoreThreshold,
-        out DetectionResult result,
-        out string reason)
+    IReadOnlyList<PlacedTileData> placedTiles,
+    MainDataSO mainDataSO,
+    float cellScale,
+    float positionQuantizeScale,
+    float rotationQuantizeScale,
+    float minTranslationLength,
+    float symmetryScoreThreshold,
+    out DetectionResult result,
+    out string reason)
     {
         _ = symmetryScoreThreshold;
 
@@ -490,6 +490,11 @@ public sealed class PeriodicMotifDetector
         bool hasNonCollinearPair = false;
         bool hasPairingPass = false;
         bool hasAnglePass = false;
+        bool hasSelfOverlapBasis = false;
+
+        bool found = false;
+        float bestArea = -1f;
+        DetectionResult best = default;
 
         for (int i = 0; i < candidates.Count; i++)
         {
@@ -497,14 +502,16 @@ public sealed class PeriodicMotifDetector
             {
                 Vector2 b1 = candidates[i];
                 Vector2 b2 = candidates[j];
-                if (Mathf.Abs(Cross(b1, b2)) <= areaEps)
+
+                float area = Mathf.Abs(Cross(b1, b2));
+                if (area <= areaEps)
                 {
                     continue;
                 }
 
                 hasNonCollinearPair = true;
-                ReduceBasis(ref b1, ref b2);
 
+                // 关键：不再 ReduceBasis，避免自动收缩到原胞
                 if (!TryBuildBoundaryPairingStrict(boundary, b1, b2, positionQuantizeScale, out int[] pairMap))
                 {
                     continue;
@@ -519,6 +526,13 @@ public sealed class PeriodicMotifDetector
 
                 hasAnglePass = true;
 
+                // 关键：如果该基向量会让“场上两块”变成晶格整数等价，则会导致你这种超胞基元回铺重叠
+                if (HasLatticeEquivalentPair(records, b1, b2, positionQuantizeScale))
+                {
+                    hasSelfOverlapBasis = true;
+                    continue;
+                }
+
                 List<DetectedCell> motif = BuildMotif(records, origin, b1, b2, positionQuantizeScale);
                 if (motif.Count == 0)
                 {
@@ -526,9 +540,21 @@ public sealed class PeriodicMotifDetector
                 }
 
                 ComputeShapeInfo(records, out CellShapeType baselineShape, out int shapeNum);
-                result = new DetectionResult(origin, b1, b2, motif, baselineShape, shapeNum);
-                return true;
+                var current = new DetectionResult(origin, b1, b2, motif, baselineShape, shapeNum);
+
+                if (!found || area > bestArea)
+                {
+                    found = true;
+                    bestArea = area;
+                    best = current;
+                }
             }
+        }
+
+        if (found)
+        {
+            result = best;
+            return true;
         }
 
         if (!hasNonCollinearPair)
@@ -549,7 +575,54 @@ public sealed class PeriodicMotifDetector
             return false;
         }
 
+        if (hasSelfOverlapBasis)
+        {
+            reason = "BASIS_TOO_SMALL|检测到基向量过小，会使场上基元在晶格平移下自重合。";
+            return false;
+        }
+
         reason = "UNKNOWN_FAIL|未找到满足条件的解。";
+        return false;
+    }
+
+    private static bool HasLatticeEquivalentPair(List<CellRecord> records, Vector2 b1, Vector2 b2, float posQ)
+    {
+        float det = Cross(b1, b2);
+        if (Mathf.Abs(det) < 1e-10f)
+        {
+            return true;
+        }
+
+        // 系数接近整数的门限：至少不小于 1e-5，并随量化尺度收敛
+        float coeffEps = Mathf.Max(1e-5f, 2f / Mathf.Max(1f, posQ));
+
+        for (int i = 0; i < records.Count; i++)
+        {
+            for (int j = i + 1; j < records.Count; j++)
+            {
+                Vector2 d = records[j].pos - records[i].pos;
+                Vector2 uv = WorldToLattice(d, b1, b2, det);
+
+                float m = Mathf.Round(uv.x);
+                float n = Mathf.Round(uv.y);
+
+                if (Mathf.Abs(uv.x - m) > coeffEps || Mathf.Abs(uv.y - n) > coeffEps)
+                {
+                    continue;
+                }
+
+                // 关键：用量化后一致性做最终确认，避免固定 epsilon 误判
+                Vector2 latticeShift = m * b1 + n * b2;
+                Vector2 qd = QuantizeVec2(d, posQ);
+                Vector2 qs = QuantizeVec2(latticeShift, posQ);
+
+                if ((qd - qs).sqrMagnitude <= 1e-8f)
+                {
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 
@@ -1020,31 +1093,15 @@ public sealed class PeriodicMotifDetector
         Vector2 b2,
         float posQ)
     {
-        float det = Cross(b1, b2);
-        if (Mathf.Abs(det) < 1e-10f)
-        {
-            return new List<DetectedCell>();
-        }
+        _ = b1;
+        _ = b2;
 
-        var dedup = new HashSet<string>();
-        var motif = new List<DetectedCell>();
+        var motif = new List<DetectedCell>(records.Count);
 
         for (int i = 0; i < records.Count; i++)
         {
             CellRecord r = records[i];
-            Vector2 d = r.pos - origin;
-            Vector2 uv = WorldToLattice(d, b1, b2, det);
-
-            float u = Wrap01(uv.x);
-            float v = Wrap01(uv.y);
-
-            Vector2 local = QuantizeVec2(u * b1 + v * b2, posQ);
-            string key = $"{(int)r.shapeType}|{r.rotKey}|{Mathf.RoundToInt(local.x * posQ)}|{Mathf.RoundToInt(local.y * posQ)}";
-
-            if (!dedup.Add(key))
-            {
-                continue;
-            }
+            Vector2 local = QuantizeVec2(r.pos - origin, posQ);
 
             motif.Add(new DetectedCell(
                 r.shapeType,
@@ -1105,19 +1162,6 @@ public sealed class PeriodicMotifDetector
         float u = (d.x * b2.y - d.y * b2.x) / det;
         float v = (-d.x * b1.y + d.y * b1.x) / det;
         return new Vector2(u, v);
-    }
-
-    private static float Wrap01(float x)
-    {
-        x -= Mathf.Floor(x);
-
-        const float seamEps = 1e-4f;
-        if (x > 1f - seamEps || x < seamEps)
-        {
-            return 0f;
-        }
-
-        return x;
     }
 
     private static Vector2[] BuildWorldVertices(TileSO tile, Vector2 pos, float rotDeg, float cellScale)

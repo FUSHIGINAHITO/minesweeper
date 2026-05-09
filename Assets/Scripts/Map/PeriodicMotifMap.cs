@@ -6,6 +6,17 @@ public class PeriodicMotifMap : TilingMap
 {
     public PeriodicMotifSO motifSO;
 
+    [Header("Gizmos")]
+    [SerializeField] private bool drawJudgeScreenRectGizmo = true;
+    [SerializeField] private bool drawJudgePlayRectGizmo = true;
+    [SerializeField] private Color judgeScreenRectGizmoColor = new(0f, 1f, 1f, 1f);
+    [SerializeField] private Color judgePlayRectGizmoColor = new(1f, 0.5f, 0f, 1f);
+    [SerializeField] private float judgeRectGizmoZ = 0f;
+
+    private Rect lastScreenRect;
+    private Rect lastPlayRect;
+    private bool hasLastJudgeRects;
+
     public override CellShapeType BaselineShape => motifSO.baselineShape;
     public override int ShapeNum => motifSO.shapeNum;
 
@@ -64,6 +75,7 @@ public class PeriodicMotifMap : TilingMap
 
         return true;
     }
+
     protected override void GenerateGrid()
     {
         float s = cellSize;
@@ -78,6 +90,10 @@ public class PeriodicMotifMap : TilingMap
             Mathf.Min(screenBL3.y, screenTR3.y),
             Mathf.Max(screenBL3.x, screenTR3.x),
             Mathf.Max(screenBL3.y, screenTR3.y));
+
+        lastPlayRect = playRect;
+        lastScreenRect = screenRect;
+        hasLastJudgeRects = true;
 
         Vector2 origin = new(
             (bottomLeft.x + topRight.x) * 0.5f,
@@ -354,5 +370,84 @@ public class PeriodicMotifMap : TilingMap
                 }
             }
         }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        bool hasPlayRect = false;
+        bool hasScreenRect = false;
+        Rect playRect = default;
+        Rect screenRect = default;
+
+        if (hasLastJudgeRects)
+        {
+            playRect = lastPlayRect;
+            screenRect = lastScreenRect;
+            hasPlayRect = true;
+            hasScreenRect = true;
+        }
+        else
+        {
+            if (topRight.x > bottomLeft.x && topRight.y > bottomLeft.y)
+            {
+                playRect = Rect.MinMaxRect(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
+                hasPlayRect = true;
+            }
+
+            if (TryGetCurrentScreenRect(out var currentScreenRect))
+            {
+                screenRect = currentScreenRect;
+                hasScreenRect = true;
+            }
+        }
+
+        if (drawJudgePlayRectGizmo && hasPlayRect)
+        {
+            DrawRectGizmo(playRect, judgePlayRectGizmoColor, judgeRectGizmoZ);
+        }
+
+        if (drawJudgeScreenRectGizmo && hasScreenRect)
+        {
+            DrawRectGizmo(screenRect, judgeScreenRectGizmoColor, judgeRectGizmoZ);
+        }
+    }
+
+    private static void DrawRectGizmo(Rect rect, Color color, float z)
+    {
+        Gizmos.color = color;
+
+        Vector3 p0 = new(rect.xMin, rect.yMin, z);
+        Vector3 p1 = new(rect.xMin, rect.yMax, z);
+        Vector3 p2 = new(rect.xMax, rect.yMax, z);
+        Vector3 p3 = new(rect.xMax, rect.yMin, z);
+
+        Gizmos.DrawLine(p0, p1);
+        Gizmos.DrawLine(p1, p2);
+        Gizmos.DrawLine(p2, p3);
+        Gizmos.DrawLine(p3, p0);
+    }
+
+    private static bool TryGetCurrentScreenRect(out Rect screenRect)
+    {
+        screenRect = default;
+
+        if (UIManager.instance == null || UIManager.instance.mainCamera == null)
+        {
+            return false;
+        }
+
+        var cam = UIManager.instance.mainCamera;
+        float camDistance = Mathf.Abs(cam.transform.position.z);
+
+        Vector3 screenBL3 = cam.ScreenToWorldPoint(new Vector3(0f, 0f, camDistance));
+        Vector3 screenTR3 = cam.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, camDistance));
+
+        screenRect = Rect.MinMaxRect(
+            Mathf.Min(screenBL3.x, screenTR3.x),
+            Mathf.Min(screenBL3.y, screenTR3.y),
+            Mathf.Max(screenBL3.x, screenTR3.x),
+            Mathf.Max(screenBL3.y, screenTR3.y));
+
+        return true;
     }
 }

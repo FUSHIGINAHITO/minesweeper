@@ -33,21 +33,33 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _AmbientLift: 0.05
     - _AngleOffset: 0
     - _BevelWidth: 0.042027663
     - _BevelWidthUV: 0.06
     - _BottomDark: 0.05
+    - _BrushScale: 120
+    - _BrushStrength: 0.2
+    - _CenterFalloff: 2.2
+    - _CenterLift: 0.12
     - _EdgeSoftness: 0.031
+    - _FresnelStrength: 0.25
+    - _MetalSmoothness: 96
+    - _MetalStrength: 0.65
+    - _NormalFromSDF: 1.2
     - _Radius: 1
-    - _RimDark: 0.3
+    - _RimDark: 0.5
     - _RimLight: 0.3
     - _SDFPxRange: 8
     - _Sides: 12
+    - _SpecularPower: 36
+    - _SpecularStrength: 0.18
     - _TopBright: 0.05
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _LightDirWS: {r: -0.65, g: 0.76, b: 0, a: 0}
+    - _MetalTint: {r: 0.95, g: 0.96999997, b: 1, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
     - _ScalePivot: {r: 0.5, g: 0.5, b: 0, a: 0}
   m_BuildTextureStacks: []

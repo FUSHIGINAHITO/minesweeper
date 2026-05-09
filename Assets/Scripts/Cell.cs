@@ -161,7 +161,7 @@ public class Cell : CellPool.PoolObj
     {
         if (!isRevealed)
         {
-            ShowRevealArt(!isFlagged);
+            ShowRevealArt(true);
             image.color = isFlagged ? mainDataSO.chordColorFlag : mainDataSO.chordColor;
         }
         else

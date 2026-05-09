@@ -34,7 +34,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _AngleOffset: 0
-    - _BevelWidth: 0.2
+    - _BevelWidth: 0.15
     - _BevelWidthUV: 0.06
     - _BottomDark: 0.3
     - _EdgeSoftness: 0.031

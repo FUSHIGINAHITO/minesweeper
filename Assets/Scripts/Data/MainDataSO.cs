@@ -12,6 +12,8 @@ public class MainDataSO : ScriptableObject
     public Material polygonRevealedMaterial;
     public float textSize;
     public float bevelSize;
+    public float minCellSize;
+    public float maxCellSize;
 
     [Header("屏幕边缘留白（统一厚度百分比，基于屏幕高度）")]
     public float marginTopPercent = 0.05f;

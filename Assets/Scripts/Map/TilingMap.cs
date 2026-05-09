@@ -8,6 +8,7 @@ public abstract partial class TilingMap : Map
 
     // 拾取桶大小：默认用 cellSize，可按地图类型覆写
     protected virtual float PickBucketSize => Mathf.Max(1e-4f, cellSize);
+    protected virtual int VertexBucketSearchRadius => 1;
 
     // 是否启用低度点剥离（2-core）
     protected virtual bool EnableLowDegreePrune => true;
@@ -297,6 +298,7 @@ public abstract partial class TilingMap : Map
         }
 
         float quantizeScale = VertexQuantizeScale;
+        int searchRadius = Mathf.Max(0, VertexBucketSearchRadius);
 
         for (int ci = 0; ci < cellCount; ci++)
         {
@@ -306,8 +308,6 @@ public abstract partial class TilingMap : Map
             var neighbours = c.neighbours;
             neighbours.Clear();
 
-            // 轻量预扩容，减少 neighbours.Add() 触发扩容
-            // 多数平铺图邻居数不高，8 是比较稳妥的经验值
             if (neighbours.Capacity < 8)
             {
                 neighbours.Capacity = 8;
@@ -324,41 +324,52 @@ public abstract partial class TilingMap : Map
             var verts = GetCellVertices(c);
             int vertCount = verts.Length;
 
-            // 一边建 vertexMap，一边连接邻接
             for (int i = 0; i < vertCount; i++)
             {
                 Vector2 v = verts[i];
-                var key = new VertexKey(
-                    (long)Mathf.Round(v.x * quantizeScale),
-                    (long)Mathf.Round(v.y * quantizeScale)
-                );
 
-                if (!vertexMap.TryGetValue(key, out var list))
+                long qx = (long)Mathf.Round(v.x * quantizeScale);
+                long qy = (long)Mathf.Round(v.y * quantizeScale);
+
+                for (int oy = -searchRadius; oy <= searchRadius; oy++)
                 {
-                    list = RentList(4);
-                    vertexMap[key] = list;
+                    for (int ox = -searchRadius; ox <= searchRadius; ox++)
+                    {
+                        var nearbyKey = new VertexKey(qx + ox, qy + oy);
+                        if (!vertexMap.TryGetValue(nearbyKey, out var list))
+                        {
+                            continue;
+                        }
+
+                        for (int j = 0, listCount = list.Count; j < listCount; j++)
+                        {
+                            var other = list[j];
+                            if (other == c)
+                            {
+                                continue;
+                            }
+
+                            int otherIndex = other.tempBuildIndex;
+                            if (neighbourSeenStamp[otherIndex] == stamp)
+                            {
+                                continue;
+                            }
+
+                            neighbourSeenStamp[otherIndex] = stamp;
+                            neighbours.Add(other);
+                            other.neighbours.Add(c);
+                        }
+                    }
                 }
 
-                for (int j = 0, listCount = list.Count; j < listCount; j++)
+                var key = new VertexKey(qx, qy);
+                if (!vertexMap.TryGetValue(key, out var baseList))
                 {
-                    var other = list[j];
-                    if (other == c)
-                    {
-                        continue;
-                    }
-
-                    int otherIndex = other.tempBuildIndex;
-                    if (neighbourSeenStamp[otherIndex] == stamp)
-                    {
-                        continue;
-                    }
-
-                    neighbourSeenStamp[otherIndex] = stamp;
-                    neighbours.Add(other);
-                    other.neighbours.Add(c);
+                    baseList = RentList(4);
+                    vertexMap[key] = baseList;
                 }
 
-                list.Add(c);
+                baseList.Add(c);
             }
         }
 

@@ -20,6 +20,7 @@ MonoBehaviour:
   polygonBorderMaterialOverride: {fileID: 2100000, guid: b35d993ea543f3844bfb2a2964a71992, type: 2}
   bevelSize: 0.2
   inradiusRatio: 2.3839633
+  outradiusRatio: 1.4733706
   areaRatio: 3.9732723
   localVertices:
   - {x: -0.49999997, y: -0.688191}
@@ -27,3 +28,5 @@ MonoBehaviour:
   - {x: 0.809017, y: 0.26286566}
   - {x: -0.00000013858862, y: 0.85065085}
   - {x: -0.8090171, y: 0.2628654}
+  minSize: 0.16967897
+  maxSize: 1.3574318

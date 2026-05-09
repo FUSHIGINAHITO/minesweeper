@@ -38,8 +38,9 @@ public class Pool<T> : MonoBehaviour where T : Pool<T>.PoolObj
     {
         for (int i = 0; i < count; i++)
         {
-            var cell = CreateInstance();
-            pool.Enqueue(cell);
+            var item = CreateInstance();
+            item.transform.position = 10000 * Vector3.one;
+            pool.Enqueue(item);
         }
 
         SyncAvailableCount();

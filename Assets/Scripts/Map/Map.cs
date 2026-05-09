@@ -4,7 +4,7 @@ using UnityEngine;
 
 public abstract class Map : MonoBehaviour
 {
-    public float cellSize = 0.5f;
+    public float cellSize;
 
     /// <summary>
     /// 密铺中内接圆最小的cell的类型
@@ -38,8 +38,9 @@ public abstract class Map : MonoBehaviour
     protected float worldWidth;
     protected float worldHeight;
 
-    public void Generate()
+    public void Generate(float size)
     {
+        cellSize = size;
         var cam = UIManager.instance.mainCamera;
         var so = Game.instance.so;
 

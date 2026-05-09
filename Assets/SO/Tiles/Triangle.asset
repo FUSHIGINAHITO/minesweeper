@@ -18,10 +18,13 @@ MonoBehaviour:
   polygonSDFTexture: {fileID: 2800000, guid: a1c343bef9004f441a547cfcb1f21513, type: 3}
   polygonMaterialOverride: {fileID: 2100000, guid: e9f943a39de000a49ae20632c6bef27a, type: 2}
   polygonBorderMaterialOverride: {fileID: 2100000, guid: 945f5cb6d07bb014ba0de930ad46044a, type: 2}
-  bevelSize: 0.2
+  bevelSize: 0.15
   inradiusRatio: 1
+  outradiusRatio: 1
   areaRatio: 1
   localVertices:
   - {x: -0.49999997, y: -0.28867516}
   - {x: 0.5, y: -0.28867507}
   - {x: -0.0000000940623, y: 0.57735026}
+  minSize: 0.25
+  maxSize: 2

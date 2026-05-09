@@ -5,30 +5,21 @@ using UnityEngine;
 
 public static class TileSOGenerator
 {
-    private const string MenuPath = "Tools/Minesweeper/Generate TileSOs From Selected MainDataSO";
+    private const string MenuPath = "Tools/Generate TileSOs";
     private const int MinSides = 3;
 
     private const string MaterialRootDir = "Assets/Shader&Material";
     private const string PolygonMaterialDir = MaterialRootDir + "/Polygon";
     private const string PolygonBorderMaterialDir = MaterialRootDir + "/PolygonBorder";
+    private const string mainDataSODir = "Assets/SO/MainDataSO.asset";
 
     private static readonly int SdfTexId = Shader.PropertyToID("_SDFTex");
     private static readonly int BevelWidthId = Shader.PropertyToID("_BevelWidth");
 
-    [MenuItem(MenuPath, true)]
-    private static bool ValidateGenerateTileSOs()
-    {
-        return Selection.activeObject is MainDataSO;
-    }
-
     [MenuItem(MenuPath)]
     private static void GenerateTileSOs()
     {
-        if (Selection.activeObject is not MainDataSO mainDataSO)
-        {
-            EditorUtility.DisplayDialog("Generate TileSOs", "请先在 Project 里选中一个 MainDataSO。", "OK");
-            return;
-        }
+        var mainDataSO = AssetDatabase.LoadAssetAtPath<MainDataSO>(mainDataSODir);
 
         if (mainDataSO.polygonBaseMaterial == null || mainDataSO.polygonBorderMaterial == null)
         {
@@ -56,6 +47,7 @@ public static class TileSOGenerator
 
         int shapeCount = System.Enum.GetValues(typeof(CellShapeType)).Length;
         float baseInradius = BuildRegularPolygonInradius(MinSides, 1f);
+        float baseOutradius = BuildRegularPolygonOutradius(MinSides, 1f);
         float baseArea = BuildRegularPolygonArea(MinSides, 1f);
 
         var generatedTiles = new List<TileSO>(shapeCount);
@@ -82,11 +74,15 @@ public static class TileSOGenerator
             }
 
             float inradius = BuildRegularPolygonInradius(sides, 1f);
+            float outradius = BuildRegularPolygonOutradius(sides, 1f);
             float area = BuildRegularPolygonArea(sides, 1f);
 
             tile.inradiusRatio = inradius / baseInradius;
+            tile.outradiusRatio = outradius / baseOutradius;
             tile.areaRatio = area / baseArea;
             tile.localVertices = BuildRegularPolygonVertices(sides, 1f);
+            tile.minSize = mainDataSO.minCellSize / tile.outradiusRatio;
+            tile.maxSize = mainDataSO.maxCellSize / tile.outradiusRatio;
 
             // 生成普通材质
             string matPath = $"{PolygonMaterialDir}/{shapeType}.mat";
@@ -117,33 +113,16 @@ public static class TileSOGenerator
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        EditorUtility.DisplayDialog(
-            "Generate TileSOs",
-            $"已生成/更新 {shapeCount} 个 TileSO。\n材质输出：\n{PolygonMaterialDir}\n{PolygonBorderMaterialDir}",
-            "OK");
+        Debug.Log($"已生成/更新 {shapeCount} 个 TileSO。\n材质输出：\n{PolygonMaterialDir}\n{PolygonBorderMaterialDir}");
     }
 
     private static Material CreateOrUpdateMaterialAsset(string assetPath, Material template, TileSO tile, int sides)
     {
-        Material mat = AssetDatabase.LoadAssetAtPath<Material>(assetPath);
-        if (mat == null)
-        {
-            mat = new Material(template);
-            mat.name = $"{template.name}_Shape_{sides}";
-            AssetDatabase.CreateAsset(mat, assetPath);
-        }
-        else
-        {
-            if (mat.shader != template.shader)
-            {
-                mat.shader = template.shader;
-            }
-        }
+        var mat = new Material(template);
+        mat.name = $"{template.name}_Shape_{sides}";
+        AssetDatabase.CreateAsset(mat, assetPath);
 
-        if (tile.polygonSDFTexture != null)
-        {
-            mat.SetTexture(SdfTexId, tile.polygonSDFTexture);
-        }
+        mat.SetTexture(SdfTexId, tile.polygonSDFTexture);
 
         float bevel = tile.bevelSize;
         float ratio = Mathf.Max(1e-6f, tile.inradiusRatio);
@@ -218,6 +197,11 @@ public static class TileSOGenerator
     private static float BuildRegularPolygonInradius(int n, float size)
     {
         return size / (2f * Mathf.Tan(Mathf.PI / n));
+    }
+
+    private static float BuildRegularPolygonOutradius(int n, float size)
+    {
+        return size / (2f * Mathf.Sin(Mathf.PI / n));
     }
 
     private static float BuildRegularPolygonArea(int n, float size)

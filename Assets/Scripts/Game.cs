@@ -377,7 +377,17 @@ public class Game : MonoBehaviour
         map.Return();
         map.motifSO = so.periodicMotifs[curId];
         curId = (curId + 1) % so.periodicMotifs.Count;
-        map.Generate();
+
+        var maxMinSize = float.MinValue;
+        var minMaxSize = float.MaxValue;
+        foreach (var c in map.motifSO.cells)
+        {
+            var tileSO = so.GetTileSO(c.shapeType);
+            maxMinSize = Mathf.Max(maxMinSize, tileSO.minSize);
+            minMaxSize = Mathf.Min(minMaxSize, tileSO.maxSize);
+        }
+
+        map.Generate(maxMinSize);
 
         gameOver = false;
         restMineCount = map.totalMineCount;

@@ -20,6 +20,9 @@ public class TileSO : ScriptableObject
 
     [Header("预计算几何（比例是相对于正三角形）")]
     public float inradiusRatio;
+    public float outradiusRatio;
     public float areaRatio;
     public Vector2[] localVertices;
+    public float minSize;
+    public float maxSize;
 }

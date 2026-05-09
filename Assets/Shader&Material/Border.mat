@@ -34,12 +34,12 @@ Material:
     m_Ints: []
     m_Floats:
     - _AngleOffset: 0
-    - _BevelWidth: 0.207
+    - _BevelWidth: 0.4
     - _BevelWidthUV: 0.06
     - _BottomDark: 0.05
     - _EdgeSoftness: 0.031
     - _Radius: 1
-    - _RimDark: 0.3
+    - _RimDark: 0.5
     - _RimLight: 0.3
     - _SDFPxRange: 8
     - _Sides: 12

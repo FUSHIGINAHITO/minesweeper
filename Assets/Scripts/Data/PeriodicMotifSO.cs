@@ -21,7 +21,6 @@ public struct MotifCellData
 public class PeriodicMotifSO : ScriptableObject
 {
     [Header("基础信息")]
-    public string motifId = "NewMotif";
     public CellShapeType baselineShape = CellShapeType.Triangle;
     [Min(1)] public int shapeNum = 1;
 

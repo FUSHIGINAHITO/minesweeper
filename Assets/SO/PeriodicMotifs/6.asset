@@ -10,21 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0ab813c7d4a22e4b9a1d672e8c9afda, type: 3}
-  m_Name: NewMotif 6
+  m_Name: 6
   m_EditorClassIdentifier: 
-  motifId: NewMotif
-  baselineShape: 1
-  shapeNum: 2
-  basis1Unit: {x: 1.70711, y: 1.70711}
-  basis2Unit: {x: 1.70711, y: -1.70711}
+  baselineShape: 3
+  shapeNum: 1
+  basis1Unit: {x: -1.5, y: 0.86603}
+  basis2Unit: {x: -1.5, y: -0.86603}
   cells:
-  - shapeType: 1
+  - shapeType: 3
     localCenterUnit: {x: 0, y: 0}
     localRotationDeg: 0
-    typeId: 1
-  - shapeType: 5
-    localCenterUnit: {x: 1.70711, y: 0}
-    localRotationDeg: -0
-    typeId: 5
+    typeId: 0
   positionQuantizeScale: 100000
   rotationQuantizeScale: 10000

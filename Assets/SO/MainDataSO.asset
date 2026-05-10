@@ -28,13 +28,13 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8a4f667b2da4dca46b1af83cf83bc42e, type: 2}
   - {fileID: 11400000, guid: 0d5bb7549cde1fe479197695ce6f7046, type: 2}
   - {fileID: 11400000, guid: 05024692e03a40e4da99295413eb6eaf, type: 2}
-  - {fileID: 11400000, guid: d399f5f2053aa6c41a4fb3cf0c6a192c, type: 2}
-  - {fileID: 11400000, guid: 828a6a077f370114487f198c7645b0a0, type: 2}
-  - {fileID: 11400000, guid: 432173261397b6b4f87ef63d20839ce1, type: 2}
-  - {fileID: 11400000, guid: 558245879a57db3439a75daea7df6925, type: 2}
-  - {fileID: 11400000, guid: d7600c6048e602842bd9ea5164fb84fc, type: 2}
-  - {fileID: 11400000, guid: 8d9c225a36e711941ac349713e712481, type: 2}
   - {fileID: 11400000, guid: 9dad573820c22d04f95a067a8155131c, type: 2}
+  - {fileID: 11400000, guid: 432173261397b6b4f87ef63d20839ce1, type: 2}
+  - {fileID: 11400000, guid: d399f5f2053aa6c41a4fb3cf0c6a192c, type: 2}
+  - {fileID: 11400000, guid: 8d9c225a36e711941ac349713e712481, type: 2}
+  - {fileID: 11400000, guid: 558245879a57db3439a75daea7df6925, type: 2}
+  - {fileID: 11400000, guid: 828a6a077f370114487f198c7645b0a0, type: 2}
+  - {fileID: 11400000, guid: d7600c6048e602842bd9ea5164fb84fc, type: 2}
   polygonBaseMaterial: {fileID: 2100000, guid: abfa4c3d6cab3ff45b0365e3254cdc6e, type: 2}
   polygonBorderMaterial: {fileID: 2100000, guid: 322ac68b5dbbbfa4aa4854a39c8d92b2, type: 2}
   polygonRevealedMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}

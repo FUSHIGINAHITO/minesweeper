@@ -10,37 +10,24 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0ab813c7d4a22e4b9a1d672e8c9afda, type: 3}
-  m_Name: NewMotif 5
+  m_Name: 31212
   m_EditorClassIdentifier: 
-  motifId: NewMotif
   baselineShape: 0
   shapeNum: 2
-  basis1Unit: {x: -1, y: 1.73205}
-  basis2Unit: {x: 3, y: 1.73205}
+  basis1Unit: {x: 0, y: 3.73206}
+  basis2Unit: {x: -3.23205, y: 1.86603}
   cells:
-  - shapeType: 3
+  - shapeType: 9
     localCenterUnit: {x: 0, y: 0}
     localRotationDeg: 0
-    typeId: 3
+    typeId: 1
   - shapeType: 0
-    localCenterUnit: {x: -1, y: 0.57735}
-    localRotationDeg: -60
+    localCenterUnit: {x: 1.07735, y: 1.86603}
+    localRotationDeg: -30
     typeId: 0
   - shapeType: 0
-    localCenterUnit: {x: -1, y: -0.57735}
-    localRotationDeg: -0
-    typeId: 0
-  - shapeType: 0
-    localCenterUnit: {x: 0, y: 1.1547}
-    localRotationDeg: -0
-    typeId: 0
-  - shapeType: 3
-    localCenterUnit: {x: 1, y: 1.73205}
-    localRotationDeg: 0
-    typeId: 3
-  - shapeType: 0
-    localCenterUnit: {x: 0, y: 2.3094}
-    localRotationDeg: -60
+    localCenterUnit: {x: 2.1547, y: 0}
+    localRotationDeg: 30
     typeId: 0
   positionQuantizeScale: 100000
   rotationQuantizeScale: 10000

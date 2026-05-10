@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0ab813c7d4a22e4b9a1d672e8c9afda, type: 3}
-  m_Name: NewMotif 4
+  m_Name: 33434
   m_EditorClassIdentifier: 
   motifId: NewMotif
   baselineShape: 0

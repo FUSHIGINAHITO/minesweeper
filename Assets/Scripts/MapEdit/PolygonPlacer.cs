@@ -530,7 +530,6 @@ public partial class PolygonPlacer : MonoBehaviour
             : exportMotifId.Trim();
 
         var so = ScriptableObject.CreateInstance<PeriodicMotifSO>();
-        so.motifId = motifId;
         so.baselineShape = detectResult.baselineShape;
         so.shapeNum = Mathf.Max(1, detectResult.shapeNum);
         so.positionQuantizeScale = Mathf.Max(1f, positionQuantizeScale);
@@ -568,7 +567,6 @@ public partial class PolygonPlacer : MonoBehaviour
                 shapeType = tile.shapeType,
                 localCenterUnit = so.QuantizePosition(localCenter / cellScale),
                 localRotationDeg = so.QuantizeRotation(qRot),
-                typeId = p.tileIndex
             });
         }
 
@@ -580,7 +578,6 @@ public partial class PolygonPlacer : MonoBehaviour
                 shapeType = detectResult.baselineShape,
                 localCenterUnit = Vector2.zero,
                 localRotationDeg = 0f,
-                typeId = (int)detectResult.baselineShape
             });
         }
 
@@ -608,7 +605,6 @@ public partial class PolygonPlacer : MonoBehaviour
     private static PeriodicMotifSO CloneMotifSO(PeriodicMotifSO source)
     {
         var clone = ScriptableObject.CreateInstance<PeriodicMotifSO>();
-        clone.motifId = source.motifId;
         clone.baselineShape = source.baselineShape;
         clone.shapeNum = source.shapeNum;
         clone.basis1Unit = source.basis1Unit;
@@ -1059,7 +1055,7 @@ public partial class PolygonPlacer : MonoBehaviour
 
         EnsureFolder(exportAssetFolder);
 
-        string safeName = SanitizeFileName(so.motifId);
+        string safeName = SanitizeFileName("NewMotif");
         string rawPath = $"{exportAssetFolder}/{safeName}.asset";
         string uniquePath = AssetDatabase.GenerateUniqueAssetPath(rawPath);
 

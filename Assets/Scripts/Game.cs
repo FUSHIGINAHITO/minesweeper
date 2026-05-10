@@ -32,25 +32,25 @@ public class Game : MonoBehaviour
             highlighted.Clear();
         }
     }
-    private ChordData leftChord = new();
-    private ChordData rightChord = new();
+
+    private readonly ChordData leftChord = new();
+    private readonly ChordData rightChord = new();
     private Cell pressedCell;
 
     [HideInInspector, NonSerialized] public bool gameOver = false;
     [HideInInspector, NonSerialized] public int restMineCount = 0;
     [HideInInspector, NonSerialized] public float elapsedTime = 0f;
+
     private bool timerRunning = false;
-    private Stack<Cell> stack = new();
-    private List<Cell> tmp = new();
+    private readonly Stack<Cell> revealStack = new();
+    private readonly List<Cell> tmp = new();
 
     private void Awake()
     {
         _instance = this;
-
         map = gameObject.AddComponent<PeriodicMotifMap>();
     }
 
-    // 初始化地图与 UI
     private void Start()
     {
         Restart();
@@ -76,13 +76,16 @@ public class Game : MonoBehaviour
             return;
         }
 
-        // 计时器
         if (timerRunning)
         {
             elapsedTime += Time.deltaTime;
         }
 
-        // 左键按下
+        HandleMouseInput();
+    }
+
+    private void HandleMouseInput()
+    {
         if (Input.GetMouseButtonDown(0))
         {
             if (rightChord.active)
@@ -107,7 +110,6 @@ public class Game : MonoBehaviour
             }
         }
 
-        // 右键按下
         if (Input.GetMouseButtonDown(1))
         {
             if (leftChord.active)
@@ -125,26 +127,12 @@ public class Game : MonoBehaviour
                     }
                     else
                     {
-                        cell.ToggleFlag();
-                        if (cell.isFlagged)
-                        {
-                            restMineCount--;
-                        }
-                        else
-                        {
-                            if (cell == pressedCell)
-                            {
-                                cell.Pressed();
-                            }
-
-                            restMineCount++;
-                        }
+                        TryToggleFlag(cell);
                     }
                 }
             }
         }
 
-        // 左键松开
         if (Input.GetMouseButtonUp(0))
         {
             DeactivateChord(false);
@@ -153,22 +141,13 @@ public class Game : MonoBehaviour
             {
                 if (!pressedCell.isFlagged)
                 {
-                    if (!map.minesPlaced)
-                    {
-                        map.PlaceMinesAvoiding(pressedCell);
-                        timerRunning = true;
-                    }
-
-                    stack.Clear();
-                    stack.Push(pressedCell);
-                    RevealRecursive();
+                    TryOpenCell(pressedCell);
                 }
 
                 pressedCell = null;
             }
         }
 
-        // 右键松开
         if (Input.GetMouseButtonUp(1))
         {
             DeactivateChord(true);
@@ -196,77 +175,146 @@ public class Game : MonoBehaviour
     private void ActivateChord(Cell cell, bool isRightChord)
     {
         var chordData = isRightChord ? rightChord : leftChord;
-        if (!chordData.active)
+        if (chordData.active)
         {
-            if (pressedCell != null)
-            {
-                pressedCell.Restore();
-                pressedCell = null;
-            }
+            return;
+        }
 
-            chordData.Activate(cell);
-            chordData.highlighted.Add(cell);
+        if (pressedCell != null)
+        {
+            pressedCell.Restore();
+            pressedCell = null;
+        }
 
-            foreach (var n in cell.neighbours)
-            {
-                if (!n.isRevealed && n.isFlagged == isRightChord)
-                {
-                    chordData.highlighted.Add(n);
-                }
-            }
+        chordData.Activate(cell);
+        chordData.highlighted.Add(cell);
 
-            foreach (var c in chordData.highlighted)
+        foreach (var n in cell.neighbours)
+        {
+            if (!n.isRevealed && n.isFlagged == isRightChord)
             {
-                c.Chord();
+                chordData.highlighted.Add(n);
             }
+        }
+
+        foreach (var c in chordData.highlighted)
+        {
+            c.Chord();
         }
     }
 
-    // 取消 chord：恢复高亮并根据需要自动标雷或扫开
     private void DeactivateChord(bool isRightChord)
     {
         var chordData = isRightChord ? rightChord : leftChord;
-        if (chordData.active)
+        if (!chordData.active)
         {
-            // 恢复高亮颜色
-            foreach (var c in chordData.highlighted)
-            {
-                c.Restore();
-            }
-
-            var cell = chordData.target;
-            cell.GetUnshownNeighbors(tmp);
-
-            var otherData = isRightChord ? leftChord : rightChord;
-            if (!gameOver && !otherData.active)
-            {
-                ApplyAutoFlagIfNeeded(cell, tmp);
-                AutoRevealIfNoRemainingMines(cell, tmp);
-            }
-
-            chordData.Deactivate();
+            return;
         }
+
+        foreach (var c in chordData.highlighted)
+        {
+            c.Restore();
+        }
+
+        var cell = chordData.target;
+        var otherData = isRightChord ? leftChord : rightChord;
+        if (!gameOver && !otherData.active)
+        {
+            TryChord(cell);
+        }
+
+        chordData.Deactivate();
     }
 
-    // 自动标旗
-    private void ApplyAutoFlagIfNeeded(Cell chordTarget, List<Cell> targets)
+    // 统一操作 API：打开一个格子（包含首击布雷、连锁展开、胜负判定）
+    public bool TryOpenCell(Cell cell)
     {
-        if (targets.Count == chordTarget.value)
+        if (cell == null || gameOver || cell.isRevealed || cell.isFlagged)
         {
-            foreach (var t in targets)
+            return false;
+        }
+
+        if (!map.minesPlaced)
+        {
+            map.PlaceMinesAvoiding(cell);
+            timerRunning = true;
+        }
+
+        revealStack.Clear();
+        revealStack.Push(cell);
+        RevealFromStack();
+
+        return true;
+    }
+
+    // 统一操作 API：切换旗子（用户右键）
+    public bool TryToggleFlag(Cell cell)
+    {
+        if (cell == null || gameOver || cell.isRevealed)
+        {
+            return false;
+        }
+
+        cell.ToggleFlag();
+        if (cell.isFlagged)
+        {
+            restMineCount--;
+        }
+        else
+        {
+            if (cell == pressedCell)
+            {
+                cell.Pressed();
+            }
+
+            restMineCount++;
+        }
+
+        return true;
+    }
+
+    // 统一操作 API：确定标旗（给 Bot 使用，避免 toggle）
+    public bool TryFlagCell(Cell cell)
+    {
+        if (cell == null || gameOver || cell.isRevealed || cell.isFlagged)
+        {
+            return false;
+        }
+
+        cell.Flag();
+        restMineCount--;
+        return true;
+    }
+
+    // 统一操作 API：Chord（自动标旗 + 自动扫开）
+    public bool TryChord(Cell chordTarget)
+    {
+        if (chordTarget == null || gameOver || !chordTarget.isRevealed || chordTarget.value <= 0)
+        {
+            return false;
+        }
+
+        chordTarget.GetUnshownNeighbors(tmp);
+        if (tmp.Count == 0)
+        {
+            return false;
+        }
+
+        bool changed = false;
+
+        if (tmp.Count == chordTarget.value)
+        {
+            foreach (var t in tmp)
             {
                 if (!t.isRevealed && !t.isFlagged)
                 {
                     t.Flag();
                     restMineCount--;
+                    changed = true;
                 }
             }
         }
-    }
 
-    // 当剩余地雷为 0 时，自动揭开未标雷邻居
-    private void AutoRevealIfNoRemainingMines(Cell chordTarget, List<Cell> targets)
-    {
         int flaggedNeighbors = 0;
         foreach (var n in chordTarget.neighbours)
         {
@@ -278,56 +326,62 @@ public class Game : MonoBehaviour
 
         if (chordTarget.value == flaggedNeighbors)
         {
-            stack.Clear();
-            foreach (var t in targets)
+            revealStack.Clear();
+            foreach (var t in tmp)
             {
                 if (!t.isRevealed && !t.isFlagged)
                 {
-                    stack.Push(t);
+                    revealStack.Push(t);
                 }
             }
-            RevealRecursive();
+
+            if (revealStack.Count > 0)
+            {
+                RevealFromStack();
+                changed = true;
+            }
         }
+
+        return changed;
     }
 
-    private void RevealRecursive()
+    private void RevealFromStack()
     {
-        while (stack.Count > 0)
+        while (revealStack.Count > 0)
         {
-            var c = stack.Pop();
-            if (!c.isRevealed)
+            var c = revealStack.Pop();
+            if (c.isRevealed || c.isFlagged)
             {
-                c.Reveal();
+                continue;
+            }
 
-                if (c.isMine)
-                {
-                    Defeat(c);
-                }
-                else
-                {
-                    CheckWin();
-                }
+            c.Reveal();
 
-                if (gameOver)
-                {
-                    return;
-                }
+            if (c.isMine)
+            {
+                Defeat(c);
+                return;
+            }
 
-                if (c.value == 0 && !c.isMine)
+            CheckWin();
+            if (gameOver)
+            {
+                return;
+            }
+
+            if (c.value == 0)
+            {
+                foreach (var n in c.neighbours)
                 {
-                    foreach (var n in c.neighbours)
+                    if (!n.isRevealed && !n.isFlagged)
                     {
-                        if (!n.isRevealed && !n.isFlagged)
-                        {
-                            stack.Push(n);
-                        }
+                        revealStack.Push(n);
                     }
                 }
             }
         }
     }
 
-    // 游戏失败：展示雷并更新 UI
     private void Defeat(Cell exploded)
     {
         if (gameOver)
@@ -336,9 +390,7 @@ public class Game : MonoBehaviour
         }
 
         GameOver();
-
         map.ShowRestMines(exploded);
-
         UIManager.instance.Defeat();
     }
 
@@ -350,11 +402,9 @@ public class Game : MonoBehaviour
         }
 
         GameOver();
-
         map.FlagRestMines();
         map.ShowVictoryAnim();
         restMineCount = 0;
-
         UIManager.instance.Victory();
     }
 
@@ -391,7 +441,7 @@ public class Game : MonoBehaviour
 
         gameOver = false;
         restMineCount = map.totalMineCount;
-        elapsedTime = 0;
+        elapsedTime = 0f;
         timerRunning = false;
 
         UIManager.instance.GameStart();

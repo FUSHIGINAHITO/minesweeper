@@ -34,6 +34,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _AngleOffset: 0
+    - _BevelSpecBoost: 2
     - _BevelWidth: 0.06666666
     - _BevelWidthUV: 0.06
     - _BottomDark: 0.3
@@ -43,6 +44,8 @@ Material:
     - _RimLight: 0.5
     - _SDFPxRange: 8
     - _Sides: 12
+    - _SpecPower: 36
+    - _SpecStrength: 0.2
     - _TopBright: 0.2
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
@@ -50,4 +53,5 @@ Material:
     - _LightDirWS: {r: -0.65, g: 0.76, b: 0, a: 0}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
     - _ScalePivot: {r: 0.5, g: 0.5, b: 0, a: 0}
+    - _SpecColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []

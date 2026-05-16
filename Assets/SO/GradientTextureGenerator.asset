@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19c17241086c6d44bbbdecb0ed5ecccc, type: 3}
+  m_Name: GradientTextureGenerator
+  m_EditorClassIdentifier: 
+  outputFolder: Assets/Texture/Gradients
+  fileName: Gradient.png
+  textureSize: 512
+  gradientComputeShader: {fileID: 7200000, guid: 60240c8089fedf54e9032152117ccc6e, type: 3}
+  shape: 0
+  linearDirection: {x: 0.65, y: -0.76}
+  radialCenter01: {x: 0.5, y: 0.5}
+  colorMode: 2
+  startColor: {r: 0.83333325, g: 1, b: 0, a: 1}
+  endColor: {r: 0, g: 1, b: 0.9888973, a: 1}
+  hueModeLightness: 0.795
+  hueModeChroma: 0.152
+  hueShortestPath: 1
+  baseColor: {r: 1, g: 1, b: 1, a: 1}
+  lightnessStart: 0.919
+  lightnessEnd: 0.856

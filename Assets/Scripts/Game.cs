@@ -9,6 +9,7 @@ public class Game : MonoBehaviour
 
     public bool debug;
     public MainDataSO so;
+    public CellOverlayImageProjector projector;
 
     [HideInInspector, NonSerialized] public PeriodicMotifMap map;
     private int curId;
@@ -49,6 +50,22 @@ public class Game : MonoBehaviour
     {
         _instance = this;
         map = gameObject.AddComponent<PeriodicMotifMap>();
+        ConfigureProjectorMaterialOptOut();
+    }
+
+    private void ConfigureProjectorMaterialOptOut()
+    {
+        HashSet<Material> disabled = new();
+
+        for (int i = 0; i < so.tiles.Count; i++)
+        {
+            TileSO tile = so.tiles[i];
+            //disabled.Add(tile.polygonMaterialOverride);
+            disabled.Add(tile.polygonBorderMaterialOverride);
+            disabled.Add(tile.polygonRevealedMaterialOverride);
+        }
+
+        projector.SetOverlayDisabledMaterials(disabled);
     }
 
     private void Start()

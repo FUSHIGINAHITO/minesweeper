@@ -14,6 +14,11 @@
         _RimLight ("Rim Light", Range(0,1)) = 0.40
         _RimDark ("Rim Dark", Range(0,1)) = 0.30
 
+        _SpecColor ("Spec Color", Color) = (1,1,1,1)
+        _SpecStrength ("Spec Strength", Range(0,2)) = 0.45
+        _SpecPower ("Spec Power", Range(1,128)) = 36
+        _BevelSpecBoost ("Bevel Spec Boost", Range(0,2)) = 0.65
+
         _BevelWidth ("Bevel Width (0-1)", Range(0,1)) = 0.1
         _EdgeSoftness ("Edge Softness", Range(0.0001,1)) = 0.20
         _ScalePivot ("Scale Pivot UV", Vector) = (0.5, 0.5, 0, 0)
@@ -61,10 +66,21 @@
             float _RimLight;
             float _RimDark;
 
+            fixed4 _SpecColor;
+            float _SpecStrength;
+            float _SpecPower;
+            float _BevelSpecBoost;
+
             float _BevelWidth;
             float _EdgeSoftness;
             float4 _ScalePivot;
             float4 _LightDirWS;
+
+            // ===== 全局叠图参数（由脚本 Shader.SetGlobalXXX 设置）=====
+            sampler2D _CellOverlayTex;
+            float4 _CellOverlayRectMinSize; // xy = min, zw = size
+            float4 _CellOverlayTint;        // rgb tint
+            float4 _CellOverlayParams;      // x = enabled(0/1), y = strength(0..1)
 
             struct appdata
             {
@@ -81,6 +97,7 @@
                 fixed4 color : COLOR;
                 float2 lightDirLocal : TEXCOORD2;
                 float2 upLocal : TEXCOORD3;
+                float2 worldXY : TEXCOORD4;
             };
 
             v2f vert(appdata v)
@@ -100,6 +117,9 @@
                 o.lightDirLocal = normalize(float2(dot(lightWS, rightWS), dot(lightWS, upWS)));
                 o.upLocal = normalize(float2(dot(worldUp, rightWS), dot(worldUp, upWS)));
 
+                float4 worldPos = mul(unity_ObjectToWorld, v.vertex);
+                o.worldXY = worldPos.xy;
+
                 return o;
             }
 
@@ -116,11 +136,25 @@
                 float vertical01 = saturate(dot(p, i.upLocal) * 0.5 + 0.5);
 
                 fixed3 baseColor = _Color.rgb * i.color.rgb;
+
+                // ===== 世界坐标叠图采样 =====
+                float2 rectSize = max(_CellOverlayRectMinSize.zw, float2(1e-4, 1e-4));
+                float2 overlayUv = (i.worldXY - _CellOverlayRectMinSize.xy) / rectSize;
+
+                float inside =
+                    step(0.0, overlayUv.x) * step(overlayUv.x, 1.0) *
+                    step(0.0, overlayUv.y) * step(overlayUv.y, 1.0);
+
+                fixed4 overlaySample = tex2D(_CellOverlayTex, saturate(overlayUv));
+                float overlayWeight = _CellOverlayParams.x * _CellOverlayParams.y * inside * overlaySample.a;
+                fixed3 overlayColor = lerp(fixed3(1, 1, 1), overlaySample.rgb * _CellOverlayTint.rgb, overlayWeight);
+
+                baseColor *= overlayColor;
+
                 fixed3 topColor = lerp(baseColor, fixed3(1,1,1), _TopBright);
                 fixed3 bottomColor = lerp(baseColor, fixed3(0,0,0), _BottomDark);
                 fixed3 c = lerp(bottomColor, topColor, vertical01);
 
-                // bevel = 原形状 - 缩小后的形状（基于 SDF）
                 float soft = max(_EdgeSoftness * 0.25, 1e-4);
 
                 float sdfOuter = tex2D(_SDFTex, i.uvSdf).r;
@@ -143,6 +177,17 @@
 
                 c = lerp(c, fixed3(0,0,0), rimDark);
                 c = lerp(c, fixed3(1,1,1), rimLight);
+
+                // ===== 镜面高光（增强光泽与立体感）=====
+                float3 n = normalize(float3(p.x, p.y, 1.35));
+                float3 l = normalize(float3(i.lightDirLocal.x, i.lightDirLocal.y, 0.55));
+                float3 v = float3(0.0, 0.0, 1.0);
+                float3 h = normalize(l + v);
+
+                float spec = pow(saturate(dot(n, h)), _SpecPower) * _SpecStrength;
+                float specMask = saturate(innerMask + edge01 * _BevelSpecBoost);
+
+                c = saturate(c + _SpecColor.rgb * (spec * specMask));
 
                 fixed alpha = tex.a * _Color.a * i.color.a;
                 return fixed4(c, alpha);

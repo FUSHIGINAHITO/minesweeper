@@ -10,6 +10,7 @@ public static class TileSOGenerator
 
     private const string MaterialRootDir = "Assets/Shader&Material";
     private const string PolygonMaterialDir = MaterialRootDir + "/Polygon";
+    private const string PolygonRevealedMaterialDir = MaterialRootDir + "/PolygonRevealed";
     private const string PolygonBorderMaterialDir = MaterialRootDir + "/PolygonBorder";
     private const string mainDataSODir = "Assets/SO/MainDataSO.asset";
 
@@ -43,6 +44,7 @@ public static class TileSOGenerator
 
         EnsureFolder(MaterialRootDir);
         EnsureFolder(PolygonMaterialDir);
+        EnsureFolder(PolygonRevealedMaterialDir);
         EnsureFolder(PolygonBorderMaterialDir);
 
         int shapeCount = System.Enum.GetValues(typeof(CellShapeType)).Length;
@@ -92,6 +94,13 @@ public static class TileSOGenerator
                 tile,
                 sides);
 
+            string matRevealedPath = $"{PolygonRevealedMaterialDir}/{shapeType}.mat";
+            Material polygonRevealedMat = CreateOrUpdateMaterialAsset(
+                matRevealedPath,
+                mainDataSO.polygonRevealedMaterial,
+                tile,
+                sides);
+
             // 生成边框材质
             string borderMatPath = $"{PolygonBorderMaterialDir}/{shapeType}.mat";
             Material polygonBorderMat = CreateOrUpdateMaterialAsset(
@@ -102,6 +111,7 @@ public static class TileSOGenerator
 
             tile.polygonMaterialOverride = polygonMat;
             tile.polygonBorderMaterialOverride = polygonBorderMat;
+            tile.polygonRevealedMaterialOverride = polygonRevealedMat;
 
             EditorUtility.SetDirty(tile);
             generatedTiles.Add(tile);

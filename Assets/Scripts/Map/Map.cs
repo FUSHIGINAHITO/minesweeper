@@ -169,8 +169,7 @@ public abstract class Map : MonoBehaviour
         {
             if (c.isMine && !c.isFlagged)
             {
-                c.isRevealed = true;
-                c.image.color = so.mineColor;
+                c.Reveal();
             }
             else if (c.isFlagged && !c.isMine)
             {

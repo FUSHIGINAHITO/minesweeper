@@ -11,8 +11,9 @@ public class TileSO : ScriptableObject
     public Sprite polygonShrinkSprite;
     public Texture polygonSDFTexture;
 
-    [Header("材质模板（留空则回退全局）")]
+    [Header("材质模板")]
     public Material polygonMaterialOverride;
+    public Material polygonRevealedMaterialOverride;
     public Material polygonBorderMaterialOverride;
 
     [Header("参数覆盖")]

@@ -908,6 +908,7 @@ GameObject:
   - component: {fileID: 1622550046}
   - component: {fileID: 1622550047}
   - component: {fileID: 1622550048}
+  - component: {fileID: 1622550049}
   m_Layer: 0
   m_Name: Game
   m_TagString: Untagged
@@ -944,6 +945,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   debug: 1
   so: {fileID: 11400000, guid: c811e96267f284f47aee9e38dff4d27f, type: 2}
+  projector: {fileID: 1622550049}
 --- !u!114 &1622550048
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -957,8 +959,37 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   autoRun: 1
+  autoRestart: 1
   actionInterval: 0
   autoRestartDelay: 0.15
+  useTrivialRule: 1
+  useSubtractionRule: 1
+  useConstraintBlockEnumeration: 1
+  useRemainingMineConstraint: 1
+  useBestProbabilityGuess: 1
+  maxEnumerationVarsPerBlock: 18
+  maxEnumerationSolutionsPerBlock: 200000
+--- !u!114 &1622550049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1622550045}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e414b20d71b93e499c76c7cf1769dd7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  enableOverlay: 1
+  overlayTexture: {fileID: 2800000, guid: 7406b9a688376754e932c2e20d05ebef, type: 3}
+  overlayStrength: 1
+  overlayTint: {r: 1, g: 1, b: 1, a: 1}
+  includeBorderCells: 1
+  refreshEveryFrame: 1
+  refreshInterval: 0.2
+  enableMaterialOptOut: 1
+  overlayDisabledMaterials: []
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

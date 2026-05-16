@@ -1,0 +1,166 @@
+﻿#pragma kernel CSMain
+
+RWTexture2D<float4> Result;
+
+int _Size;
+int _Shape;      // 0: Linear, 1: Radial
+int _ColorMode;  // 0: Grayscale, 1: Hue, 2: LightnessFromBaseColor
+
+float2 _LinearDirection;
+float2 _RadialCenter01;
+
+float _HueModeLightness;
+float _HueModeChroma;
+int _HueShortestPath;
+
+float _LightnessStart;
+float _LightnessEnd;
+
+float _GrayStartL;
+float _GrayEndL;
+float _HueStart;
+float _HueEnd;
+float _BaseHue;
+float _BaseChroma;
+
+float _AlphaStart;
+float _AlphaEnd;
+float _AlphaBase;
+
+float LinearToSrgb(float x)
+{
+    if (x <= 0.0031308) return 12.92 * x;
+    return 1.055 * pow(x, 1.0 / 2.4) - 0.055;
+}
+
+float4 OklchToSrgbUnsafe(float l, float c, float h01, float alpha)
+{
+    float angle = h01 * 6.28318530718;
+    float a = c * cos(angle);
+    float b = c * sin(angle);
+
+    float l_ = l + 0.3963377774 * a + 0.2158037573 * b;
+    float m_ = l - 0.1055613458 * a - 0.0638541728 * b;
+    float s_ = l - 0.0894841775 * a - 1.2914855480 * b;
+
+    float l3 = l_ * l_ * l_;
+    float m3 = m_ * m_ * m_;
+    float s3 = s_ * s_ * s_;
+
+    float rLin = 4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
+    float gLin = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
+    float bLin = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3;
+
+    float r = LinearToSrgb(rLin);
+    float g = LinearToSrgb(gLin);
+    float bl = LinearToSrgb(bLin);
+
+    return float4(r, g, bl, alpha);
+}
+
+float4 OklchToSrgbWithGamutFit(float l, float c, float h01, float alpha)
+{
+    float lo = 0.0;
+    float hi = max(0.0, c);
+
+    float4 best = OklchToSrgbUnsafe(l, 0.0, h01, alpha);
+
+    [unroll]
+    for (int i = 0; i < 14; i++)
+    {
+        float mid = (lo + hi) * 0.5;
+        float4 candidate = OklchToSrgbUnsafe(l, mid, h01, alpha);
+
+        bool inGamut =
+            candidate.r >= 0.0 && candidate.r <= 1.0 &&
+            candidate.g >= 0.0 && candidate.g <= 1.0 &&
+            candidate.b >= 0.0 && candidate.b <= 1.0;
+
+        if (inGamut)
+        {
+            best = candidate;
+            lo = mid;
+        }
+        else
+        {
+            hi = mid;
+        }
+    }
+
+    best.a = alpha;
+    return best;
+}
+
+float LerpHue01(float h0, float h1, float t, int shortestPath)
+{
+    h0 = frac(h0);
+    h1 = frac(h1);
+
+    if (shortestPath == 0)
+    {
+        return frac(lerp(h0, h1, t));
+    }
+
+    float delta = h1 - h0;
+    if (delta > 0.5) delta -= 1.0;
+    else if (delta < -0.5) delta += 1.0;
+
+    return frac(h0 + delta * t);
+}
+
+float CalcMaxRadialDistance(float2 center01)
+{
+    float d00 = distance(center01, float2(0.0, 0.0));
+    float d10 = distance(center01, float2(1.0, 0.0));
+    float d01 = distance(center01, float2(0.0, 1.0));
+    float d11 = distance(center01, float2(1.0, 1.0));
+    return max(max(d00, d10), max(d01, d11));
+}
+
+float EvaluateT(float2 uv)
+{
+    if (_Shape == 1)
+    {
+        float maxD = CalcMaxRadialDistance(_RadialCenter01);
+        float d = distance(uv, _RadialCenter01);
+        return maxD <= 1e-6 ? 0.0 : saturate(d / maxD);
+    }
+
+    float2 dir = _LinearDirection;
+    float len2 = dot(dir, dir);
+    if (len2 <= 1e-8) dir = float2(1.0, 0.0);
+    else dir = normalize(dir);
+
+    float projection = dot(uv - float2(0.5, 0.5), dir);
+    return saturate(projection + 0.5);
+}
+
+float4 EvaluateColor(float t)
+{
+    if (_ColorMode == 0)
+    {
+        float l = lerp(_GrayStartL, _GrayEndL, t);
+        float a = lerp(_AlphaStart, _AlphaEnd, t);
+        return OklchToSrgbWithGamutFit(l, 0.0, 0.0, a);
+    }
+
+    if (_ColorMode == 1)
+    {
+        float h = LerpHue01(_HueStart, _HueEnd, t, _HueShortestPath);
+        float a = lerp(_AlphaStart, _AlphaEnd, t);
+        return OklchToSrgbWithGamutFit(_HueModeLightness, _HueModeChroma, h, a);
+    }
+
+    float lightness = lerp(_LightnessStart, _LightnessEnd, t);
+    return OklchToSrgbWithGamutFit(lightness, _BaseChroma, _BaseHue, _AlphaBase);
+}
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_Size || id.y >= (uint)_Size) return;
+
+    float2 uv = (float2(id.xy) + 0.5) / (float)_Size;
+    float t = EvaluateT(uv);
+    Result[id.xy] = EvaluateColor(t);
+}

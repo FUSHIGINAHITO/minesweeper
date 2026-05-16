@@ -181,7 +181,7 @@ public class Cell : CellPool.PoolObj
     {
         if (v)
         {
-            image.sharedMaterial = mainDataSO.polygonRevealedMaterial;
+            image.sharedMaterial = so.polygonRevealedMaterialOverride;
             image.sprite = so.polygonShrinkSprite;
         }
         else

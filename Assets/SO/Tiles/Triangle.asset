@@ -17,6 +17,7 @@ MonoBehaviour:
   polygonShrinkSprite: {fileID: 21300000, guid: 4f42e868697eef24990ee52f1e706c49, type: 3}
   polygonSDFTexture: {fileID: 2800000, guid: a1c343bef9004f441a547cfcb1f21513, type: 3}
   polygonMaterialOverride: {fileID: 2100000, guid: e9f943a39de000a49ae20632c6bef27a, type: 2}
+  polygonRevealedMaterialOverride: {fileID: 2100000, guid: 179f4b2a62505ea4696047fd02f6787e, type: 2}
   polygonBorderMaterialOverride: {fileID: 2100000, guid: 945f5cb6d07bb014ba0de930ad46044a, type: 2}
   bevelSize: 0.15
   inradiusRatio: 1

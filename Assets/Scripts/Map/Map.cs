@@ -173,6 +173,8 @@ public abstract class Map : MonoBehaviour
             }
             else if (c.isFlagged && !c.isMine)
             {
+                c.Unflag();
+                c.Reveal();
                 c.image.color = so.wrongFlagColor;
             }
         }

@@ -959,6 +959,7 @@ GameObject:
   - component: {fileID: 1622550047}
   - component: {fileID: 1622550048}
   - component: {fileID: 1622550049}
+  - component: {fileID: 1622550050}
   m_Layer: 0
   m_Name: Game
   m_TagString: Untagged
@@ -1040,6 +1041,19 @@ MonoBehaviour:
   refreshInterval: 0.2
   enableMaterialOptOut: 1
   overlayDisabledMaterials: []
+--- !u!114 &1622550050
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1622550045}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e31fbb494d42eb54a968f2e22c3440f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dir: {x: -0.65, y: 0.76}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -19,6 +19,8 @@ public class MainDataSO : ScriptableObject
     public float marginTopPercent = 0.05f;
 
     public Sprite[] numbers;
+    public Sprite mine;
+    public Sprite flag;
     public Color[] colors;
 
     [Header("格子颜色配置")]

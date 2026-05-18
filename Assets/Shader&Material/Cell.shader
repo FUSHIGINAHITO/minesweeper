@@ -22,8 +22,6 @@
         _BevelWidth ("Bevel Width (0-1)", Range(0,1)) = 0.1
         _EdgeSoftness ("Edge Softness", Range(0.0001,1)) = 0.20
         _ScalePivot ("Scale Pivot UV", Vector) = (0.5, 0.5, 0, 0)
-
-        _LightDirWS ("Light Dir WS (XY)", Vector) = (-0.65, 0.76, 0, 0)
     }
 
     SubShader
@@ -35,7 +33,6 @@
             "IgnoreProjector"="True"
             "CanUseSpriteAtlas"="True"
             "PreviewType"="Plane"
-            "DisableBatching"="True"
         }
 
         Cull Off
@@ -74,6 +71,8 @@
             float _BevelWidth;
             float _EdgeSoftness;
             float4 _ScalePivot;
+
+            // 全局光方向（由 Shader.SetGlobalVector("_LightDirWS", ...) 设置）
             float4 _LightDirWS;
 
             // ===== 全局叠图参数（由脚本 Shader.SetGlobalXXX 设置）=====
@@ -95,10 +94,14 @@
                 float2 uv : TEXCOORD0;
                 float2 uvSdf : TEXCOORD1;
                 fixed4 color : COLOR;
-                float2 lightDirLocal : TEXCOORD2;
-                float2 upLocal : TEXCOORD3;
-                float2 worldXY : TEXCOORD4;
+                float2 worldXY : TEXCOORD2;
             };
+
+            float2 SafeNormalize2(float2 v, float2 fallback)
+            {
+                float len = length(v);
+                return (len > 1e-5) ? (v / len) : fallback;
+            }
 
             v2f vert(appdata v)
             {
@@ -107,15 +110,6 @@
                 o.uv = TRANSFORM_TEX(v.texcoord, _MainTex);
                 o.uvSdf = TRANSFORM_TEX(v.texcoord, _SDFTex);
                 o.color = v.color * _RendererColor;
-
-                float2 rightWS = normalize(float2(unity_ObjectToWorld._m00, unity_ObjectToWorld._m10));
-                float2 upWS = normalize(float2(unity_ObjectToWorld._m01, unity_ObjectToWorld._m11));
-
-                float2 lightWS = normalize(_LightDirWS.xy);
-                float2 worldUp = float2(0.0, 1.0);
-
-                o.lightDirLocal = normalize(float2(dot(lightWS, rightWS), dot(lightWS, upWS)));
-                o.upLocal = normalize(float2(dot(worldUp, rightWS), dot(worldUp, upWS)));
 
                 float4 worldPos = mul(unity_ObjectToWorld, v.vertex);
                 o.worldXY = worldPos.xy;
@@ -133,7 +127,41 @@
 
                 float2 p = i.uv * 2.0 - 1.0;
                 float2 dirForLighting = (dot(p, p) > 1e-6) ? normalize(p) : float2(0, 1);
-                float vertical01 = saturate(dot(p, i.upLocal) * 0.5 + 0.5);
+
+                // ===== 关键：片元阶段由 UV->World 的雅可比反推局部方向，避免受合批矩阵路径影响 =====
+                float2 lightWS = SafeNormalize2(_LightDirWS.xy, float2(0.0, 1.0));
+                float2 worldUp = float2(0.0, 1.0);
+
+                float2 dpdx = ddx(i.worldXY);
+                float2 dpdy = ddy(i.worldXY);
+                float2 duvdx = ddx(i.uv);
+                float2 duvdy = ddy(i.uv);
+
+                float detUv = duvdx.x * duvdy.y - duvdx.y * duvdy.x;
+                float invDetUv = (abs(detUv) > 1e-8) ? rcp(detUv) : 0.0;
+
+                // J = d(world)/d(uv)，列向量分别是 dPdu, dPdv
+                float2 dPdu = (dpdx * duvdy.y - dpdy * duvdx.y) * invDetUv;
+                float2 dPdv = (-dpdx * duvdy.x + dpdy * duvdx.x) * invDetUv;
+
+                float detJ = dPdu.x * dPdv.y - dPdu.y * dPdv.x;
+                float invDetJ = (abs(detJ) > 1e-8) ? rcp(detJ) : 0.0;
+
+                // local = J^{-1} * world
+                float2 lightDirLocal = float2(
+                    dPdv.y * lightWS.x - dPdv.x * lightWS.y,
+                   -dPdu.y * lightWS.x + dPdu.x * lightWS.y
+                ) * invDetJ;
+
+                float2 upLocal = float2(
+                    dPdv.y * worldUp.x - dPdv.x * worldUp.y,
+                   -dPdu.y * worldUp.x + dPdu.x * worldUp.y
+                ) * invDetJ;
+
+                lightDirLocal = SafeNormalize2(lightDirLocal, float2(0.0, 1.0));
+                upLocal = SafeNormalize2(upLocal, float2(0.0, 1.0));
+
+                float vertical01 = saturate(dot(p, upLocal) * 0.5 + 0.5);
 
                 fixed3 baseColor = _Color.rgb * i.color.rgb;
 
@@ -172,15 +200,15 @@
 
                 float edge01 = saturate(outerMask - innerMask);
 
-                float rimLight = edge01 * saturate(dot(dirForLighting, i.lightDirLocal)) * _RimLight;
-                float rimDark = edge01 * saturate(dot(dirForLighting, -i.lightDirLocal)) * _RimDark;
+                float rimLight = edge01 * saturate(dot(dirForLighting, lightDirLocal)) * _RimLight;
+                float rimDark = edge01 * saturate(dot(dirForLighting, -lightDirLocal)) * _RimDark;
 
                 c = lerp(c, fixed3(0,0,0), rimDark);
                 c = lerp(c, fixed3(1,1,1), rimLight);
 
                 // ===== 镜面高光（增强光泽与立体感）=====
                 float3 n = normalize(float3(p.x, p.y, 1.35));
-                float3 l = normalize(float3(i.lightDirLocal.x, i.lightDirLocal.y, 0.55));
+                float3 l = normalize(float3(lightDirLocal.x, lightDirLocal.y, 0.55));
                 float3 v = float3(0.0, 0.0, 1.0);
                 float3 h = normalize(l + v);
 

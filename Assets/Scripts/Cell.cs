@@ -111,15 +111,13 @@ public class Cell : CellPool.PoolObj
 
     public void ToggleFlag()
     {
-        isFlagged = !isFlagged;
-
         if (isFlagged)
         {
-            Flag();
+            Unflag();
         }
         else
         {
-            Unflag();
+            Flag();
         }
     }
 
@@ -128,6 +126,8 @@ public class Cell : CellPool.PoolObj
         isFlagged = true;
         image.color = mainDataSO.flagColor;
         Restore();
+
+        ShowText();
     }
 
     public void Unflag()
@@ -135,6 +135,8 @@ public class Cell : CellPool.PoolObj
         isFlagged = false;
         image.color = mainDataSO.defaultColor;
         Restore();
+
+        ReturnText();
     }
 
     public void Pressed()
@@ -225,7 +227,7 @@ public class Cell : CellPool.PoolObj
 
     private void ShowText()
     {
-        if (!isMine && value > 0)
+        if (isFlagged || isMine || value > 0)
         {
             if (imageHandler is null)
             {
@@ -234,8 +236,25 @@ public class Cell : CellPool.PoolObj
 
             imageHandler.transform.SetPositionAndRotation(trans.position, Quaternion.identity);
             imageHandler.transform.localScale = Game.instance.map.textSize * Vector3.one;
-            imageHandler.image.sprite = mainDataSO.numbers[Mathf.Clamp(value, 0, mainDataSO.numbers.Length - 1)];
-            imageHandler.image.color = mainDataSO.colors[Mathf.Clamp(value, 0, mainDataSO.colors.Length - 1)];
+
+            if (isFlagged)
+            {
+                imageHandler.image.sprite = mainDataSO.flag;
+                imageHandler.image.color = Color.white;
+            }
+            else
+            {
+                if (!isMine)
+                {
+                    imageHandler.image.sprite = mainDataSO.numbers[Mathf.Clamp(value, 0, mainDataSO.numbers.Length - 1)];
+                    imageHandler.image.color = mainDataSO.colors[Mathf.Clamp(value, 0, mainDataSO.colors.Length - 1)];
+                }
+                else
+                {
+                    imageHandler.image.sprite = mainDataSO.mine;
+                    imageHandler.image.color = Color.white;
+                }
+            }
         }
     }
 }

@@ -43,20 +43,42 @@ MonoBehaviour:
   minCellSize: 0.25
   maxCellSize: 2
   marginTopPercent: 0.05
+  numbers:
+  - {fileID: 0}
+  - {fileID: 21300000, guid: 89ac14330504e904b94c60d4a44dcf02, type: 3}
+  - {fileID: 21300000, guid: 7eeaabf814367be45b184b3a25fcca63, type: 3}
+  - {fileID: 21300000, guid: 2d7568e5b389eed43bd75699c12107e0, type: 3}
+  - {fileID: 21300000, guid: 1c48ec713f41a45448864248f73afb0a, type: 3}
+  - {fileID: 21300000, guid: b2a73c22c5b90d84e8793675d21c5233, type: 3}
+  - {fileID: 21300000, guid: b8ac2dc80559367488e6c3bb83dc5312, type: 3}
+  - {fileID: 21300000, guid: 794ee2ebd7cd5294a9ccdf6f38905140, type: 3}
+  - {fileID: 21300000, guid: 61d572ec8af97aa45a558ff6d3c3ac16, type: 3}
+  - {fileID: 21300000, guid: 3e9012dae29de364698f68763279a8a5, type: 3}
+  - {fileID: 21300000, guid: c4f1bbd671af0574680bf0563dbdacc1, type: 3}
+  - {fileID: 21300000, guid: e88682629732d4e4ab41d46d2d77bd07, type: 3}
+  - {fileID: 21300000, guid: 8727c60006e51cf4698aeb4b8beb3ee7, type: 3}
+  - {fileID: 21300000, guid: 6ecb0d242586d244fbc7b6b79405c095, type: 3}
+  - {fileID: 21300000, guid: 3470404cfa3c9974ebbef3e771225111, type: 3}
+  - {fileID: 21300000, guid: 39591ff3907cad948b5c0e619a7196fd, type: 3}
+  - {fileID: 21300000, guid: 8e63c6db1b61c684c86cf426a67b4112, type: 3}
+  - {fileID: 21300000, guid: 1ae01af20b2214045bbe0dd4f4ff0382, type: 3}
+  - {fileID: 21300000, guid: 6102c97c17c6eea45a4e079a2031435d, type: 3}
+  - {fileID: 21300000, guid: e29dba27c16ac014c8ae04d104df2bbd, type: 3}
+  - {fileID: 21300000, guid: 700601daddeeef144a4f9e6df17bf925, type: 3}
   colors:
   - {r: 0, g: 0, b: 0, a: 0}
   - {r: 0, g: 0, b: 1, a: 1}
-  - {r: 0, g: 0.46226418, b: 0, a: 1}
-  - {r: 0.764151, g: 0, b: 0, a: 1}
-  - {r: 0.01671208, g: 0.01671208, b: 0.408805, a: 1}
-  - {r: 0.49056602, g: 0.2584864, b: 0.108757555, a: 1}
-  - {r: 0, g: 0.70483863, b: 0.7264151, a: 1}
-  - {r: 0.13207549, g: 0.13207549, b: 0.13207549, a: 1}
-  - {r: 0.6132076, g: 0.6132076, b: 0.6132076, a: 1}
+  - {r: 0, g: 0.57861626, b: 0, a: 1}
+  - {r: 0.8867924, g: 0, b: 0, a: 1}
+  - {r: 0, g: 0, b: 0.59748423, a: 1}
+  - {r: 0.6792453, g: 0.43944824, b: 0.2840868, a: 1}
+  - {r: 0, g: 0.8016317, b: 0.8238993, a: 1}
+  - {r: 0.1509434, g: 0.1509434, b: 0.1509434, a: 1}
+  - {r: 0.66666657, g: 0.66666657, b: 0.66666657, a: 1}
   - {r: 0.7562283, g: 0.12517802, b: 0.9150943, a: 1}
-  - {r: 0.8962264, g: 0.5476848, b: 0.080322154, a: 1}
-  - {r: 0.11160557, g: 0.7169812, b: 0.28736135, a: 1}
-  - {r: 0.7411765, g: 0.019607857, b: 0.43064472, a: 1}
+  - {r: 0.9559748, g: 0.5936905, b: 0.10521724, a: 1}
+  - {r: 0.10970674, g: 0.8113208, b: 0.3134011, a: 1}
+  - {r: 0.84276724, g: 0, b: 0.4809268, a: 1}
   borderColor: {r: 0, g: 0, b: 0, a: 1}
   defaultColor: {r: 1, g: 1, b: 1, a: 1}
   pressedColor: {r: 0.929, g: 0.929, b: 0.929, a: 0.7490196}

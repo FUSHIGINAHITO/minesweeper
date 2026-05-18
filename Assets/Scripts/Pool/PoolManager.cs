@@ -7,6 +7,7 @@ public class PoolManager : MonoBehaviour
 
     public TextPool textPool;
     public CellPool cellPool;
+    public ImagePool imgPool;
 
     [SerializeField] private MainDataSO mainDataSO;
 

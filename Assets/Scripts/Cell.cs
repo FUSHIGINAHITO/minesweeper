@@ -12,7 +12,7 @@ public class Cell : CellPool.PoolObj
     [NonSerialized, HideInInspector] public bool isFlagged;
 
     public SpriteRenderer image;
-    [NonSerialized, HideInInspector] public TextHandler text;
+    private ImageHandler imageHandler;
 
     [NonSerialized, HideInInspector] public CellShapeType shapeType;
     [NonSerialized, HideInInspector] public Vector2[] cachedWorldVertices;
@@ -216,10 +216,10 @@ public class Cell : CellPool.PoolObj
 
     private void ReturnText()
     {
-        if (text is not null)
+        if (imageHandler is not null)
         {
-            text.Return();
-            text = null;
+            imageHandler.Return();
+            imageHandler = null;
         }
     }
 
@@ -227,15 +227,15 @@ public class Cell : CellPool.PoolObj
     {
         if (!isMine && value > 0)
         {
-            if (text is null)
+            if (imageHandler is null)
             {
-                text = PoolManager.instance.textPool.Require();
+                imageHandler = PoolManager.instance.imgPool.Require();
             }
 
-            text.transform.SetPositionAndRotation(trans.position, Quaternion.identity);
-            text.transform.localScale = Game.instance.map.textSize * Vector3.one;
-            text.text.text = value.ToString();
-            text.text.color = mainDataSO.colors[Mathf.Clamp(value, 0, mainDataSO.colors.Length - 1)];
+            imageHandler.transform.SetPositionAndRotation(trans.position, Quaternion.identity);
+            imageHandler.transform.localScale = Game.instance.map.textSize * Vector3.one;
+            imageHandler.image.sprite = mainDataSO.numbers[Mathf.Clamp(value, 0, mainDataSO.numbers.Length - 1)];
+            imageHandler.image.color = mainDataSO.colors[Mathf.Clamp(value, 0, mainDataSO.colors.Length - 1)];
         }
     }
 }

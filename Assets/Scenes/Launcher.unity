@@ -1012,6 +1012,7 @@ MonoBehaviour:
   autoRun: 1
   autoRestart: 1
   actionInterval: 0
+  maxStepsPerFrame: 1
   autoRestartDelay: 0.15
   useTrivialRule: 1
   useSubtractionRule: 1
@@ -1020,6 +1021,7 @@ MonoBehaviour:
   useBestProbabilityGuess: 1
   maxEnumerationVarsPerBlock: 18
   maxEnumerationSolutionsPerBlock: 200000
+  maxGlobalEnumerationVars: 20
 --- !u!114 &1622550049
 MonoBehaviour:
   m_ObjectHideFlags: 0

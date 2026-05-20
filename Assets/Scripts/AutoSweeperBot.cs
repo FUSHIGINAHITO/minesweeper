@@ -9,6 +9,7 @@ public class AutoSweeperBot : MonoBehaviour
     [SerializeField] private bool autoRun = true;
     [SerializeField] private bool autoRestart = true;
     [SerializeField] private float actionInterval = 0.1f;
+    [SerializeField] private int maxStepsPerFrame = 4;
     [SerializeField] private float autoRestartDelay = 0.15f;
 
     [Header("策略开关（按顺序尝试）")]
@@ -21,6 +22,9 @@ public class AutoSweeperBot : MonoBehaviour
     [Header("枚举限制")]
     [SerializeField] private int maxEnumerationVarsPerBlock = 18;
     [SerializeField] private int maxEnumerationSolutionsPerBlock = 200000;
+
+    [Header("全局枚举阈值（若未知格总数 ≤ 此值，则尝试全局枚举）")]
+    [SerializeField] private int maxGlobalEnumerationVars = 20;
 
     private float actionTimer;
     private float restartTimer;
@@ -52,7 +56,6 @@ public class AutoSweeperBot : MonoBehaviour
         OpenSafe,
         FlagMine
     }
-
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.A))
@@ -85,14 +88,30 @@ public class AutoSweeperBot : MonoBehaviour
             return;
         }
 
+        // 累积时间
         actionTimer += Time.deltaTime;
-        if (actionTimer < actionInterval)
-        {
-            return;
-        }
 
-        actionTimer -= actionInterval;
-        StepOnce(game, map);
+        // 每帧最多执行 maxStepsPerFrame 步，且根据 actionInterval 决定是否用时间触发。
+        // 对 actionInterval <= 0 做保护：当为 0 时按 maxStepsPerFrame 尽可能快执行（但不无限循环）。
+        int steps = 0;
+
+        if (actionInterval <= 0f)
+        {
+            while (steps < maxStepsPerFrame && !game.gameOver)
+            {
+                StepOnce(game, map);
+                steps++;
+            }
+        }
+        else
+        {
+            while (actionTimer >= actionInterval && steps < maxStepsPerFrame && !game.gameOver)
+            {
+                actionTimer -= actionInterval;
+                StepOnce(game, map);
+                steps++;
+            }
+        }
     }
 
     private void BeginNewRound()
@@ -177,6 +196,28 @@ public class AutoSweeperBot : MonoBehaviour
             return;
         }
 
+        // 全局小规模枚举（若未知格总数较小）
+        if (useConstraintBlockEnumeration)
+        {
+            unknownCache.Clear();
+            foreach (var c in map.cellList)
+            {
+                if (!c.isRevealed && !c.isFlagged)
+                {
+                    unknownCache.Add(c);
+                }
+            }
+
+            if (unknownCache.Count > 0 && unknownCache.Count <= maxGlobalEnumerationVars)
+            {
+                if (TryGlobalEnumeration(game, map))
+                {
+                    enumerationUsed++;
+                    return;
+                }
+            }
+        }
+
         if (useConstraintBlockEnumeration && TryConstraintBlockEnumeration(game, map))
         {
             enumerationUsed++;
@@ -229,13 +270,14 @@ public class AutoSweeperBot : MonoBehaviour
                 {
                     if (!u.isFlagged && game.TryFlagCell(u))
                     {
-                        return true; // 每 0.1s 只做一次“点击”
+                        return true;
                     }
                 }
             }
 
-            // 规则B：已标雷数 == 数字 -> 可 chord
-            if (flaggedNeighbors.Count == c.value && game.TryChord(c))
+            // 规则B：已标雷数 == 数字 且存在未标记的未知邻居 -> 可 chord
+            int unflaggedUnknown = unknownNeighbors.Count - flaggedNeighbors.Count;
+            if (flaggedNeighbors.Count == c.value && unflaggedUnknown > 0 && game.TryChord(c))
             {
                 return true; // 这是一次 chord 点击
             }
@@ -282,6 +324,7 @@ public class AutoSweeperBot : MonoBehaviour
 
     private bool ApplySubtractionPair(Game game, Cell baseCell, Cell superCell)
     {
+        // 获取两个约束的未知且未标记集合
         var baseUnknown = GetUnknownUnflaggedSet(baseCell);
         var superUnknown = GetUnknownUnflaggedSet(superCell);
 
@@ -290,37 +333,323 @@ public class AutoSweeperBot : MonoBehaviour
             return false;
         }
 
-        if (!IsSubset(baseUnknown, superUnknown))
+        // 计算交集 I、Aonly（仅在 base 中）、Bonly（仅在 super 中）
+        var inter = new HashSet<Cell>(baseUnknown);
+        inter.IntersectWith(superUnknown);
+
+        // 如果没有共享未知格，则不做差分（严格的人类式：相邻且有共享未知格）
+        if (inter.Count == 0)
         {
             return false;
         }
 
-        int baseRemain = RemainingMinesAround(baseCell);
-        int superRemain = RemainingMinesAround(superCell);
-        int diffMines = superRemain - baseRemain;
+        var Aonly = new List<Cell>();
+        var Bonly = new List<Cell>();
 
-        diffBuffer.Clear();
-        foreach (var c in superUnknown)
+        foreach (var c in baseUnknown)
         {
-            if (!baseUnknown.Contains(c))
+            if (!inter.Contains(c))
             {
-                diffBuffer.Add(c);
+                Aonly.Add(c);
             }
         }
 
-        if (diffBuffer.Count == 0)
+        foreach (var c in superUnknown)
+        {
+            if (!inter.Contains(c))
+            {
+                Bonly.Add(c);
+            }
+        }
+
+        int a = Aonly.Count;
+        int b = Bonly.Count;
+        int i = inter.Count;
+
+        // 剩余雷数（考虑已标志）
+        int baseRemain = RemainingMinesAround(baseCell);
+        int superRemain = RemainingMinesAround(superCell);
+
+        // 差值 d = sum(A) - sum(B) = r1 - r2
+        int d = baseRemain - superRemain;
+
+        // 若是子集情形（原实现），仍保留原快速路径以减少分支开销
+        if (a == 0 && i > 0)
+        {
+            // baseUnknown ⊆ superUnknown
+            diffBuffer.Clear();
+            foreach (var c in superUnknown)
+            {
+                if (!baseUnknown.Contains(c))
+                {
+                    diffBuffer.Add(c);
+                }
+            }
+
+            if (diffBuffer.Count == 0)
+            {
+                return false;
+            }
+
+            int diffMines = superRemain - baseRemain;
+            if (diffMines == 0)
+            {
+                return game.TryOpenCell(diffBuffer[0]);
+            }
+
+            if (diffMines == diffBuffer.Count)
+            {
+                return game.TryFlagCell(diffBuffer[0]);
+            }
+
+            return false;
+        }
+
+        // 通用差分判据（两约束交/差分析）
+        // sum(A) ∈ [max(0, d), min(a, d + b)]
+        int amin = Math.Max(0, d);
+        int amax = Math.Min(a, d + b);
+
+        if (amin > amax)
+        {
+            // 无可行解（说明当前状态与标记不一致），跳过
+            return false;
+        }
+
+        // 若 sum(A) 被完全确定
+        if (amin == amax)
+        {
+            int v = amin; // sum(A) 的确定值
+
+            // 优先尝试揭示确定为安全的格子（sum==0）
+            if (v == 0 && a > 0)
+            {
+                // Aonly 全安全
+                return game.TryOpenCell(Aonly[0]);
+            }
+
+            // 若 Aonly 全为雷
+            if (v == a && a > 0)
+            {
+                return game.TryFlagCell(Aonly[0]);
+            }
+
+            // 同时计算 sum(B) = sum(A) - d
+            int sumB = v - d;
+            if (sumB == 0 && b > 0)
+            {
+                return game.TryOpenCell(Bonly[0]);
+            }
+
+            if (sumB == b && b > 0)
+            {
+                return game.TryFlagCell(Bonly[0]);
+            }
+
+            // 若没有可操作的 Aonly/Bonly（可能都是空），尝试对交集做判断：
+            // 如果 sum(I) 可以被确定（通过 r1 - sum(A) 或 r2 - sum(B)）
+            if (i > 0)
+            {
+                int sumIfromA = baseRemain - v; // sum(I) = r1 - sum(A)
+                if (sumIfromA == 0)
+                {
+                    // 交集全部安全
+                    foreach (var c in inter)
+                    {
+                        if (!c.isFlagged && game.TryOpenCell(c))
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                if (sumIfromA == i)
+                {
+                    // 交集全部为雷
+                    foreach (var c in inter)
+                    {
+                        if (!c.isFlagged && game.TryFlagCell(c))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // 快速常用判别（常见模板）
+        // d == a -> Aonly 全为雷，Bonly 全安全
+        if (d == a && a > 0)
+        {
+            return game.TryFlagCell(Aonly[0]);
+        }
+
+        // d == -b -> Aonly 全安全，Bonly 全为雷
+        if (d == -b && b > 0)
+        {
+            return game.TryOpenCell(Aonly.Count > 0 ? Aonly[0] : (Bonly.Count > 0 ? Bonly[0] : null));
+        }
+
+        // 其它情形无法通过两约束差分做确定性推导，交由枚举/概率处理
+        return false;
+    }
+
+    private bool TryGlobalEnumeration(Game game, PeriodicMotifMap map)
+    {
+        // 构建全局变量表（涵盖所有未知且未标记格）以及约束（来自所有数字格）
+        if (!BuildGlobalConstraints(map, out var vars, out var constraints))
         {
             return false;
         }
 
-        if (diffMines == 0)
+        int varCount = vars.Count;
+        if (varCount == 0 || constraints.Count == 0)
         {
-            return game.TryOpenCell(diffBuffer[0]);
+            return false;
         }
 
-        if (diffMines == diffBuffer.Count)
+        if (varCount > maxGlobalEnumerationVars)
         {
-            return game.TryFlagCell(diffBuffer[0]);
+            return false;
+        }
+
+        var varToCons = new List<int>[varCount];
+        for (int i = 0; i < varCount; i++)
+        {
+            varToCons[i] = new List<int>(4);
+        }
+
+        for (int ci = 0; ci < constraints.Count; ci++)
+        {
+            var c = constraints[ci];
+            for (int k = 0; k < c.vars.Length; k++)
+            {
+                varToCons[c.vars[k]].Add(ci);
+            }
+        }
+
+        var assignment = new int[varCount];
+        for (int i = 0; i < varCount; i++)
+        {
+            assignment[i] = -1;
+        }
+
+        var assignedCount = new int[constraints.Count];
+        var mineCount = new int[constraints.Count];
+        var mineAppear = new int[varCount];
+
+        int totalSolutions = 0;
+        bool aborted = false;
+        int restMines = game.restMineCount;
+
+        void Dfs(int depth, int curMines)
+        {
+            if (aborted)
+            {
+                return;
+            }
+
+            if (totalSolutions >= maxEnumerationSolutionsPerBlock)
+            {
+                aborted = true;
+                return;
+            }
+
+            // 剪枝：当前已分配雷数不能超过全局剩余；且剩余变量必须能容纳至少所需的雷
+            int remainingVars = varCount - depth;
+            if (curMines > restMines || curMines + remainingVars < restMines)
+            {
+                return;
+            }
+
+            if (depth == varCount)
+            {
+                if (curMines != restMines)
+                {
+                    return;
+                }
+
+                totalSolutions++;
+                for (int i = 0; i < varCount; i++)
+                {
+                    if (assignment[i] == 1)
+                    {
+                        mineAppear[i]++;
+                    }
+                }
+
+                return;
+            }
+
+            int v = depth; // 顺序遍历（不做复杂排序）
+            var linkedCons = varToCons[v];
+
+            for (int val = 0; val <= 1; val++)
+            {
+                assignment[v] = val;
+                bool valid = true;
+                int deltaM = val;
+
+                // 更新约束局部信息
+                for (int i = 0; i < linkedCons.Count; i++)
+                {
+                    int ci = linkedCons[i];
+                    assignedCount[ci]++;
+                    mineCount[ci] += val;
+
+                    var lc = constraints[ci];
+                    int minPossible = mineCount[ci];
+                    int maxPossible = mineCount[ci] + (lc.vars.Length - assignedCount[ci]);
+
+                    if (lc.required < minPossible || lc.required > maxPossible)
+                    {
+                        valid = false;
+                    }
+                }
+
+                if (valid)
+                {
+                    Dfs(depth + 1, curMines + deltaM);
+                }
+
+                // 恢复
+                for (int i = 0; i < linkedCons.Count; i++)
+                {
+                    int ci = linkedCons[i];
+                    assignedCount[ci]--;
+                    mineCount[ci] -= val;
+                }
+
+                assignment[v] = -1;
+
+                if (aborted)
+                {
+                    return;
+                }
+            }
+        }
+
+        Dfs(0, 0);
+
+        if (aborted || totalSolutions <= 0)
+        {
+            return false;
+        }
+
+        // 优先找必安全/必为雷
+        for (int i = 0; i < varCount; i++)
+        {
+            if (mineAppear[i] == 0)
+            {
+                return game.TryOpenCell(vars[i]);
+            }
+
+            if (mineAppear[i] == totalSolutions)
+            {
+                return game.TryFlagCell(vars[i]);
+            }
         }
 
         return false;
@@ -338,6 +667,16 @@ public class AutoSweeperBot : MonoBehaviour
         if (varCount == 0 || conCount == 0)
         {
             return false;
+        }
+
+        // 计算全局未知数以便组件级别推导使用（组件区间约束所需）
+        int totalUnknownCount = 0;
+        foreach (var c in map.cellList)
+        {
+            if (!c.isRevealed && !c.isFlagged)
+            {
+                totalUnknownCount++;
+            }
         }
 
         var varToCons = new List<int>[varCount];
@@ -427,6 +766,8 @@ public class AutoSweeperBot : MonoBehaviour
                 constraints,
                 compVars,
                 compCons,
+                totalUnknownCount,
+                game.restMineCount,
                 out var action,
                 out var actionCell))
             {
@@ -443,6 +784,94 @@ public class AutoSweeperBot : MonoBehaviour
         }
 
         return false;
+    }
+
+    private bool BuildGlobalConstraints(PeriodicMotifMap map, out List<Cell> vars, out List<Constraint> constraints)
+    {
+        // vars 包含所有未知且未被标记的格（全局）
+        vars = new List<Cell>(256);
+        constraints = new List<Constraint>(256);
+
+        var varIndex = new Dictionary<Cell, int>(256);
+
+        // 全局未知表
+        foreach (var c in map.cellList)
+        {
+            if (!c.isRevealed && !c.isFlagged)
+            {
+                if (!varIndex.ContainsKey(c))
+                {
+                    varIndex[c] = vars.Count;
+                    vars.Add(c);
+                }
+            }
+        }
+
+        if (vars.Count == 0)
+        {
+            return false;
+        }
+
+        // 构建约束（与 BuildConstraints 类似，但索引基于全局 vars）
+        foreach (var r in map.cellList)
+        {
+            if (!r.isRevealed || r.value <= 0)
+            {
+                continue;
+            }
+
+            int flagged = 0;
+            unknownCache.Clear();
+
+            foreach (var n in r.neighbours)
+            {
+                if (!n.isRevealed)
+                {
+                    if (n.isFlagged)
+                    {
+                        flagged++;
+                    }
+                    else
+                    {
+                        unknownCache.Add(n);
+                    }
+                }
+            }
+
+            if (unknownCache.Count == 0)
+            {
+                continue;
+            }
+
+            int remain = r.value - flagged;
+            if (remain < 0 || remain > unknownCache.Count)
+            {
+                continue;
+            }
+
+            var idx = new int[unknownCache.Count];
+            for (int i = 0; i < unknownCache.Count; i++)
+            {
+                var cell = unknownCache[i];
+                if (!varIndex.TryGetValue(cell, out int vi))
+                {
+                    // should not happen as varIndex already includes all unknowns, but guard
+                    vi = vars.Count;
+                    vars.Add(cell);
+                    varIndex[cell] = vi;
+                }
+
+                idx[i] = vi;
+            }
+
+            constraints.Add(new Constraint
+            {
+                vars = idx,
+                required = remain
+            });
+        }
+
+        return vars.Count > 0 && constraints.Count > 0;
     }
 
     private bool BuildConstraints(PeriodicMotifMap map, out List<Cell> vars, out List<Constraint> constraints)
@@ -517,6 +946,8 @@ public class AutoSweeperBot : MonoBehaviour
         List<Constraint> globalConstraints,
         List<int> compVars,
         List<int> compCons,
+        int totalUnknownCount,
+        int restMines,
         out EnumeratedAction action,
         out Cell actionCell)
     {
@@ -587,21 +1018,34 @@ public class AutoSweeperBot : MonoBehaviour
         int totalSolutions = 0;
         bool aborted = false;
 
-        void Dfs(int depth)
+        // 组件外未知数（component 外的未知格）
+        int outsideUnknown = totalUnknownCount - localVarCount;
+        int minComp = Math.Max(0, restMines - outsideUnknown);
+        int maxComp = Math.Min(localVarCount, restMines);
+
+        void Dfs(int depth, int curCompMines)
         {
             if (aborted)
             {
                 return;
             }
 
-            if (totalSolutions > maxEnumerationSolutionsPerBlock)
+            if (totalSolutions >= maxEnumerationSolutionsPerBlock)
             {
                 aborted = true;
                 return;
             }
 
+            // 组件级全局区间剪枝
+            int remainingVars = localVarCount - depth;
+            if (curCompMines > maxComp || curCompMines + remainingVars < minComp)
+            {
+                return;
+            }
+
             if (depth == localVarCount)
             {
+                // 到达叶子，已满足组件整体区间约束（由上方剪枝保证）
                 totalSolutions++;
                 for (int i = 0; i < localVarCount; i++)
                 {
@@ -640,7 +1084,7 @@ public class AutoSweeperBot : MonoBehaviour
 
                 if (valid)
                 {
-                    Dfs(depth + 1);
+                    Dfs(depth + 1, curCompMines + val);
                 }
 
                 for (int i = 0; i < linkedCons.Count; i++)
@@ -651,10 +1095,15 @@ public class AutoSweeperBot : MonoBehaviour
                 }
 
                 assignment[v] = -1;
+
+                if (aborted)
+                {
+                    return;
+                }
             }
         }
 
-        Dfs(0);
+        Dfs(0, 0);
 
         if (aborted || totalSolutions <= 0)
         {

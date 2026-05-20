@@ -90,7 +90,7 @@ MonoBehaviour:
   flagColor: {r: 1, g: 1, b: 1, a: 1}
   revealedColor: {r: 1, g: 1, b: 1, a: 0.7490196}
   mineColor: {r: 1, g: 1, b: 1, a: 0.7490196}
-  bombMineColor: {r: 0.9622642, g: 0.31167662, b: 0.31167662, a: 1}
+  bombMineColor: {r: 0.9685534, g: 0.16142547, b: 0.16142547, a: 1}
   wrongFlagColor: {r: 0.7882353, g: 0.52156866, b: 0.9607843, a: 1}
   normalBgColor: {r: 0.78616345, g: 0.78616345, b: 0.78616345, a: 1}
   lightness: 0.9
